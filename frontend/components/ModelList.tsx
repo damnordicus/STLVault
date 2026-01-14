@@ -3,17 +3,15 @@ import {
   CloudUpload,
   FileBox,
   Search,
-  ArrowUpDown,
   CheckSquare,
-  Square,
   MoreVertical,
-  Trash2,
   ExternalLink,
   Download,
   Globe,
   Folder as FolderIcon,
   DownloadIcon,
   ScreenShareIcon,
+  XCircle,
 } from "lucide-react";
 import { STLModel, Folder } from "../types";
 import { api } from "../services/api";
@@ -27,7 +25,7 @@ import CardActionArea from "@mui/material/CardActionArea";
 import CardActions from "@mui/material/CardActions";
 import Chip from "@mui/material/Chip";
 import { String } from "three/examples/jsm/transpiler/AST.js";
-import { IconButton } from "@mui/material";
+import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -35,6 +33,11 @@ import Divider from "@mui/material/Divider";
 import Checkbox from "@mui/material/Checkbox";
 import Avatar from "@mui/material/Avatar";
 import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import FormControl from "@mui/material/FormControl";
+import Select, { SelectChangeEvent } from "@mui/material/Select";
+import InputLabel from "@mui/material/InputLabel";
 
 interface ModelListProps {
   models: STLModel[];
@@ -92,8 +95,6 @@ const ModelList: React.FC<ModelListProps> = ({
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-
-  // Close menu when clicking outside
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -283,32 +284,57 @@ const ModelList: React.FC<ModelListProps> = ({
         </div>
 
         {/* Search & Sort Bar */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 ">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search by name or tags..."
-              className="w-full bg-vault-900 border border-vault-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors placeholder:text-slate-600"
-              value={searchQuery}
+            <TextField
+              fullWidth
+              id="search-input"
+              label="Search"
               onChange={(e) => setSearchQuery(e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => {
+                          setSearchQuery("");
+                          document.getElementById("search-input").value = "";
+                        }}
+                        edge="end"
+                      >
+                        <XCircle />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              variant="outlined"
             />
           </div>
 
           <div className="relative min-w-[200px]">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="w-full appearance-none bg-vault-900 border border-vault-700 rounded-lg pl-4 pr-10 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none cursor-pointer transition-colors"
-            >
-              <option value="date-desc">Date Added (Newest)</option>
-              <option value="date-asc">Date Added (Oldest)</option>
-              <option value="name-asc">Name (A-Z)</option>
-              <option value="name-desc">Name (Z-A)</option>
-              <option value="size-desc">Size (Largest)</option>
-              <option value="size-asc">Size (Smallest)</option>
-            </select>
-            <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+            <FormControl fullWidth>
+              <InputLabel id="demo-simple-select-label">Sort</InputLabel>
+              <Select
+                labelId="demo-simple-select-label"
+                id="demo-simple-select"
+                value={sortBy}
+                label="Sort"
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+              >
+                <MenuItem value="date-desc">Date Added (Newest)</MenuItem>
+                <MenuItem value="date-asc">Date Added (Oldest)</MenuItem>
+                <MenuItem value="name-asc">Name (A-Z)</MenuItem>
+                <MenuItem value="name-desc">Name (Z-A)</MenuItem>
+                <MenuItem value="size-desc">Size (Largest)</MenuItem>
+                <MenuItem value="size-asc">Size (Smallest)</MenuItem>
+              </Select>
+            </FormControl>
           </div>
         </div>
       </div>
@@ -438,13 +464,9 @@ const ModelList: React.FC<ModelListProps> = ({
                       onSelectModel(model);
                     }
                   }}
-                  className={`group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 relative active:cursor-grabbing ${
-                    isSelected || selectedModelId === model.id
-                      ? "border-blue-500 ring-1 ring-blue-500/50"
-                      : "border-vault-700 hover:border-vault-600"
-                  }`}
+                  className={`group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 relative active:cursor-grabbing`}
                 >
-                  <Card>
+                  <Card raised={isSelected}>
                     <CardActionArea>
                       {model.thumbnail ? (
                         <CardMedia
