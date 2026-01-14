@@ -33,6 +33,8 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
 import Checkbox from "@mui/material/Checkbox";
+import Avatar from "@mui/material/Avatar";
+import Stack from "@mui/material/Stack";
 
 interface ModelListProps {
   models: STLModel[];
@@ -229,26 +231,7 @@ const ModelList: React.FC<ModelListProps> = ({
   const selectionMode = selectedIds.size > 0;
 
   return (
-    <div
-      className="flex-1 p-2 sm:p-4 h-full overflow-y-auto bg-vault-800 relative flex flex-col"
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      {/* Drag Overlay */}
-      {isDragging && (
-        <div className="absolute inset-0 bg-blue-600/20 border-4 border-dashed border-blue-500 z-50 flex items-center justify-center backdrop-blur-sm m-4 rounded-xl pointer-events-none">
-          <div className="text-center">
-            <CloudUpload className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-bounce" />
-            <h2 className="text-2xl font-bold text-white">
-              Drop 3D files here
-            </h2>
-            <p className="text-blue-200 mt-2">Supported: STL, STEP, 3MF</p>
-          </div>
-        </div>
-      )}
-
+    <div className="flex-1 p-2 sm:p-4 h-full overflow-y-auto bg-vault-800 relative flex flex-col">
       {/* Header Section */}
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -378,31 +361,66 @@ const ModelList: React.FC<ModelListProps> = ({
                   setDragOverFolderId(null);
                 }}
                 onDrop={(e) => handleFolderDrop(e, folder.id)}
-                className={`group bg-vault-900 border rounded-xl p-4 cursor-pointer transition-all flex items-center gap-4 relative overflow-hidden
-                    ${
-                      dragOverFolderId === folder.id
-                        ? "border-blue-400 bg-blue-900/10 ring-1 ring-blue-400"
-                        : "border-vault-700 hover:border-vault-600 hover:bg-vault-800/50"
-                    }
-                  `}
+                className={`cursor-pointer transition-all flex items-center relative overflow-hidden hover:-translate-y-1 ${
+                  dragOverFolderId === folder.id
+                    ? " -translate-y-1 brightness-150"
+                    : " "
+                }`}
               >
-                <div className="w-12 h-12 bg-blue-900/20 rounded-lg flex items-center justify-center text-blue-500 group-hover:text-blue-400 group-hover:scale-110 transition-all shrink-0">
-                  <FolderIcon className="w-6 h-6" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-slate-200 truncate group-hover:text-white">
-                    {folder.name}
-                  </h3>
-                  <p className="text-xs text-slate-500">Folder</p>
-                </div>
-                {dragOverFolderId === folder.id && (
-                  <div className="absolute inset-0 bg-blue-500/10 animate-pulse pointer-events-none" />
-                )}
+                <Card className="w-full">
+                  <CardActionArea>
+                    <CardContent>
+                      <Stack
+                        sx={{
+                          justifyContent: "start",
+                          alignItems: "center",
+                        }}
+                        direction="row"
+                        spacing={2}
+                      >
+                        <Avatar sx={{}}>
+                          <FolderIcon />
+                        </Avatar>
+                        <Stack>
+                          <Typography variant="body1" component="div">
+                            {folder.name}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: "text.secondary" }}
+                          >
+                            Folder
+                          </Typography>
+                        </Stack>
+                      </Stack>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
               </div>
             ))}
           </div>
           {/* Files */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 pb-24">
+          <div
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 pb-24"
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {/* Drag Overlay */}
+            {isDragging && (
+              <div className="relative bg-white/20 border-4 border-dashed border-white-500 z-50 flex items-center justify-center backdrop-blur-sm m-4 rounded-md pointer-events-none">
+                <div className="text-center">
+                  <CloudUpload className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-bounce" />
+                  <h2 className="text-2xl font-bold text-white">
+                    Drop 3D files
+                  </h2>
+                  <p className="text-blue-200 mt-2">
+                    Supported: STL, STEP, 3MF
+                  </p>
+                </div>
+              </div>
+            )}
             {/* Render Models */}
             {processedModels.map((model) => {
               const isSelected = selectedIds.has(model.id);
@@ -440,7 +458,7 @@ const ModelList: React.FC<ModelListProps> = ({
                           <FileBox className="w-12 h-12 text-slate-600 group-hover:text-blue-400 transition-colors" />
                         </>
                       )}
-                      <div className="absolute bottom-[5.2rem] left-2 flex flex-wrap gap-1 justify-end max-w-[80%]">
+                      <div className="absolute bottom-[5.2rem] left-2 flex gap-1 max-w-[80%]">
                         {model.tags.slice(0, 2).map((tag) => (
                           <Chip
                             sx={{
