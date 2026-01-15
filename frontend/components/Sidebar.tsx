@@ -30,6 +30,9 @@ import {
   TreeItemProps,
   TreeItemSlotProps,
 } from "@mui/x-tree-view/TreeItem";
+import Container from "@mui/material/Container";
+import Button from "@mui/material/Button";
+import OutlinedInput from "@mui/material/OutlinedInput";
 
 const APP_TAG = import.meta.env.VITE_APP_TAG || __APP_VERSION__ || "dev";
 
@@ -333,6 +336,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       event.stopPropagation();
       setCreatingSubfolderId(props.itemId);
       setIsCreatingRoot(true);
+      document.getElementById("folder-name-input").focus();
     };
 
     return (
@@ -365,58 +369,81 @@ const Sidebar: React.FC<SidebarProps> = ({
   });
 
   return (
-    <div
-      className="bg-vault-900 border-r border-vault-700 flex flex-col h-full select-none relative shrink-0 group/sidebar"
+    <Container
+      disableGutters
+      sx={{ bgcolor: "common.black" }}
+      className="border-r border-vault-700 flex flex-col h-full select-none relative shrink-0 group/sidebar"
       style={isDesktopVariant ? { width } : undefined}
       onDragLeave={() => setDragTargetId(null)}
     >
       <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/20 shrink-0">
-          <Box className="w-5 h-5 text-white" />
-        </div>
-        <h1 className="text-xl font-bold text-white tracking-tight truncate">
-          STL Vault v{APP_TAG}
-        </h1>
+        <Stack
+          direction="row"
+          gap={1}
+          sx={{
+            justifyContent: "flex-start",
+            alignItems: "baseline",
+            minWidth: 0,
+          }}
+        >
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/20 shrink-0 pt-1">
+            <Box className="w-5 h-5 text-white pb-1" />
+          </div>
+          <Typography noWrap variant="h4">
+            STLVault
+          </Typography>
+          <Typography
+            noWrap
+            variant="subtitle2"
+            sx={{ color: "text.secondary" }}
+          >
+            v{APP_TAG}
+          </Typography>
+        </Stack>
       </div>
 
       <div className="px-4 mb-4">
-        <button
-          onClick={() => setIsCreatingRoot(true)}
-          className="w-full flex items-center justify-center gap-2 bg-vault-800 hover:bg-vault-700 text-slate-200 py-2 px-4 rounded-md transition-colors border border-vault-700 shadow-sm overflow-hidden"
+        <Button
+          fullWidth
+          startIcon={<Plus />}
+          onClick={() => {
+            setIsCreatingRoot(true);
+            document.getElementById("folder-name-input").focus();
+          }}
+          variant="outlined"
         >
-          <Plus className="w-4 h-4 shrink-0" />
-          <span className="truncate">New Root Folder</span>
-        </button>
+          New Root Folder
+        </Button>
       </div>
 
-      {isCreatingRoot && (
-        <form
-          onSubmit={handleCreateFolderSubmit}
-          className="px-4 mb-4 animate-in slide-in-from-top-2 fade-in duration-200"
-        >
-          <div className="flex items-center gap-1">
-            <input
-              autoFocus
-              type="text"
-              className="w-full bg-vault-900 border border-blue-500 rounded px-3 py-2 text-sm text-white focus:outline-none shadow-sm"
-              placeholder="Folder Name..."
-              value={newRootName}
-              onChange={(e) => setNewRootName(e.target.value)}
-              onBlur={() => {
-                !newRootName.trim();
+      <form
+        onSubmit={handleCreateFolderSubmit}
+        className={`px-4 mb-4 transition-all duration-400 ${
+          isCreatingRoot ? "opacity-100" : "opacity-0 scale-y-0 origin-top h-0"
+        }`}
+      >
+        <div className="flex items-center gap-1">
+          <OutlinedInput
+            id="folder-name-input"
+            type="text"
+            className="w-full"
+            placeholder="Folder Name..."
+            value={newRootName}
+            onChange={(e) => setNewRootName(e.target.value)}
+            onBlur={() => {
+              !newRootName.trim();
+              setIsCreatingRoot(false);
+              setCreatingSubfolderId("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
                 setIsCreatingRoot(false);
                 setCreatingSubfolderId("");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setIsCreatingRoot(false);
-                  setCreatingSubfolderId("");
-                }
-              }}
-            />
-          </div>
-        </form>
-      )}
+              }
+            }}
+          />
+        </div>
+      </form>
 
       <nav className="flex-1 overflow-y-auto px-2 space-y-0.5 scrollbar-thin scrollbar-thumb-vault-700 scrollbar-track-transparent">
         <button
@@ -452,7 +479,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
 
-      <div className="p-4 border-t border-vault-700 bg-vault-900 z-10 gap-3 flex flex-col">
+      <div className="p-4 border-t border-vault-700 z-10 gap-3 flex flex-col">
         <button
           onClick={onOpenSettings}
           className="w-full flex items-center justify-center gap-2 bg-vault-800 hover:bg-vault-700 text-slate-200 py-2 px-4 rounded-md transition-colors border border-vault-700 shadow-sm overflow-hidden"
@@ -487,7 +514,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           onMouseDown={startResizing}
         />
       )}
-    </div>
+    </Container>
   );
 };
 
