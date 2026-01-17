@@ -221,7 +221,7 @@ const Viewer3D: React.FC<Viewer3DProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full bg-gradient-to-br from-vault-800 to-vault-900 rounded-lg overflow-hidden relative group ${
+      className={`w-full h-full overflow-hidden relative group ${
         isFullscreen ? "flex items-center justify-center" : ""
       }`}
     >
