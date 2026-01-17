@@ -12,6 +12,7 @@ import {
   DownloadIcon,
   ScreenShareIcon,
   XCircle,
+  ChevronLeft,
 } from "lucide-react";
 import { STLModel, Folder } from "../types";
 import { api } from "../services/api";
@@ -247,7 +248,7 @@ const ModelList: React.FC<ModelListProps> = ({
   return (
     <div className="flex-1 p-2 sm:p-4 h-full overflow-y-auto relative flex flex-col">
       {/* Header Section */}
-      <div className="flex flex-col gap-6 mb-8">
+      <div className="flex flex-col gap-6 mb-4">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
             <Stack
@@ -399,8 +400,11 @@ const ModelList: React.FC<ModelListProps> = ({
         </div>
       ) : (
         <div>
+          <Button aria-label="navigate back" startIcon={<ChevronLeft />}>
+            Back
+          </Button>
           {/* Folders */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 pb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 pb-5 pt-2">
             {/* Render Folders First */}
             {processedFolders.map((folder) => (
               <div

@@ -25,6 +25,7 @@ import {
   UseTreeItemStatus,
 } from "@mui/x-tree-view/useTreeItem";
 import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
+import { SimpleTreeView } from "@mui/x-tree-view/SimpleTreeView";
 import {
   TreeItem,
   TreeItemProps,
@@ -33,6 +34,7 @@ import {
 import Container from "@mui/material/Container";
 import Button from "@mui/material/Button";
 import OutlinedInput from "@mui/material/OutlinedInput";
+import Badge from "@mui/material/Badge";
 
 const APP_TAG = import.meta.env.VITE_APP_TAG || __APP_VERSION__ || "dev";
 
@@ -372,7 +374,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     <Container
       disableGutters
       sx={{ bgcolor: "common.black" }}
-      className="border-r border-vault-700 flex flex-col h-full select-none relative shrink-0 group/sidebar"
+      className="border-r border-vault-700 flex flex-col h-full select-none relative shrink-0 group/sidebar mr-6"
       style={isDesktopVariant ? { width } : undefined}
       onDragLeave={() => setDragTargetId(null)}
     >
@@ -402,72 +404,69 @@ const Sidebar: React.FC<SidebarProps> = ({
         </Stack>
       </div>
 
-      <div className="px-4 mb-4">
-        <Button
-          fullWidth
-          startIcon={<Plus />}
-          onClick={() => {
-            setIsCreatingRoot(true);
-            document.getElementById("folder-name-input").focus();
-          }}
-          variant="outlined"
-        >
-          New Root Folder
-        </Button>
-      </div>
-
-      <form
-        onSubmit={handleCreateFolderSubmit}
-        className={`px-4 mb-4 transition-all duration-400 ${
-          isCreatingRoot ? "opacity-100" : "opacity-0 scale-y-0 origin-top h-0"
-        }`}
-      >
-        <div className="flex items-center gap-1">
-          <OutlinedInput
-            id="folder-name-input"
-            type="text"
-            className="w-full"
-            placeholder="Folder Name..."
-            value={newRootName}
-            onChange={(e) => setNewRootName(e.target.value)}
-            onBlur={() => {
-              !newRootName.trim();
-              setIsCreatingRoot(false);
-              setCreatingSubfolderId("");
+      <nav className="flex-1 overflow-y-auto px-2 space-y-0.5 scrollbar-thin scrollbar-thumb-vault-700 scrollbar-track-transparent overflow-y-scroll">
+        <div className="px-4 mb-4">
+          <Button
+            fullWidth
+            startIcon={<Plus />}
+            onClick={() => {
+              setIsCreatingRoot(true);
+              document.getElementById("folder-name-input").focus();
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                setIsCreatingRoot(false);
-                setCreatingSubfolderId("");
-              }
-            }}
-          />
+            variant="outlined"
+          >
+            New Root Folder
+          </Button>
         </div>
-      </form>
 
-      <nav className="flex-1 overflow-y-auto px-2 space-y-0.5 scrollbar-thin scrollbar-thumb-vault-700 scrollbar-track-transparent">
-        <button
-          onClick={() => onSelectFolder("all")}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors group mb-2 ${
-            currentFolderId === "all"
-              ? "bg-blue-600/20 text-blue-400"
-              : "text-slate-400 hover:bg-vault-800 hover:text-slate-200"
+        <form
+          onSubmit={handleCreateFolderSubmit}
+          className={`px-4 mb-4 transition-all duration-400 ${
+            isCreatingRoot ? "opacity-100" : "opacity-0 origin-top h-0"
           }`}
         >
-          <LayoutGrid className="w-5 h-5 shrink-0" />
-          <span className="text-sm font-medium flex-1 text-left truncate">
-            All Models
-          </span>
-          <span className="text-xs text-slate-600 group-hover:text-slate-500 shrink-0">
-            {models.length}
-          </span>
-        </button>
+          <div className="flex items-center gap-1 mb-3">
+            <OutlinedInput
+              id="folder-name-input"
+              type="text"
+              className="w-full"
+              placeholder="Folder Name..."
+              value={newRootName}
+              onChange={(e) => setNewRootName(e.target.value)}
+              onBlur={() => {
+                !newRootName.trim();
+                setIsCreatingRoot(false);
+                setCreatingSubfolderId("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setIsCreatingRoot(false);
+                  setCreatingSubfolderId("");
+                }
+              }}
+            />
+          </div>
+        </form>
 
-        <div className="pt-2 pb-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider flex justify-between items-center">
-          <span>Library</span>
+        <Button
+          variant="contained"
+          startIcon={<LayoutGrid />}
+          color={currentFolderId === "all" ? "info" : "primary"}
+          onClick={() => onSelectFolder("all")}
+          endIcon={
+            <Badge badgeContent={models.length} className="mr-2"></Badge>
+          }
+          className="w-full"
+          sx={{ alignItems: "center", justifyContent: "space-between" }}
+        >
+          All Models
+        </Button>
+
+        <div className="pt-2 pb-1 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider flex justify-between items-center">
+          <Typography variant="subtitle1">Library</Typography>
         </div>
 
-        <div className="space-y-1 pb-4">
+        <div className="space-y-1 pb-4 ">
           <RichTreeView
             items={treefolders()}
             slots={{ item: CustomTreeItem }}
@@ -480,19 +479,22 @@ const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       <div className="p-4 border-t border-vault-700 z-10 gap-3 flex flex-col">
-        <button
+        <Button
+          variant="outlined"
+          startIcon={<Settings />}
+          color="info"
           onClick={onOpenSettings}
-          className="w-full flex items-center justify-center gap-2 bg-vault-800 hover:bg-vault-700 text-slate-200 py-2 px-4 rounded-md transition-colors border border-vault-700 shadow-sm overflow-hidden"
+          className="w-full"
+          sx={{ alignItems: "center", justifyContent: "center" }}
         >
-          <Settings className="w-4 h-4 shrink-0" />
-          <span className="truncate">Settings</span>
-        </button>
+          Settings
+        </Button>
 
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-3 shadow-lg">
-          <p className="text-xs text-white/80 font-medium mb-1 truncate">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-md p-3 shadow-lg">
+          <p className="text-xs text-white/80 font-medium mb-1 truncate mb-2">
             Storage Used
           </p>
-          <div className="w-full bg-black/20 rounded-full h-1.5 mb-2 overflow-hidden">
+          <div className="w-full bg-black/20 rounded-full h-1.5 mb-1 overflow-hidden">
             <div
               className="bg-white h-full rounded-full transition-all duration-500 ease-out"
               style={{ width: `${percentUsed}%` }}
