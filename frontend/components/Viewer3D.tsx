@@ -14,6 +14,7 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
 import { Maximize, Minimize, FileWarning } from "lucide-react";
 import * as THREE from "three";
+import { LoadStep } from "./STEPLoader";
 
 let API_BASE_URL = "";
 
@@ -71,27 +72,28 @@ const Model = ({
   color = "#3b82f6",
   onLoaded,
 }: Viewer3DProps) => {
-  const is3MF = useMemo(
-    () => filename.toLowerCase().endsWith(".3mf"),
-    [filename]
-  );
-  const Loader = is3MF ? ThreeMFLoader : STLLoader;
+  const ext = useMemo(() => {
+    return filename.toLowerCase().split(".").pop();
+  }, [filename]);
+
+  const Loader = ext == "3mf" ? ThreeMFLoader : STLLoader;
 
   // Use the appropriate loader
   const urlpath = API_BASE_URL + url;
-  const data = useLoader(Loader as any, urlpath);
+  let data = useLoader(Loader as any, urlpath);
 
   const modelObject = useMemo(() => {
-    if (is3MF) {
+    if (ext == "3mf") {
       return data as THREE.Group;
+    } else if (ext == "stl") {
+      return data as THREE.BufferGeometry;
     }
-    return data as THREE.BufferGeometry;
-  }, [data, is3MF]);
+  }, [data, ext]);
 
   useLayoutEffect(() => {
     const box = new THREE.Box3();
 
-    if (is3MF) {
+    if (ext == "3mf") {
       const group = modelObject as THREE.Group;
 
       // 3MF Fix: Replaces materials with MeshStandardMaterial to ensure shading works.
@@ -118,7 +120,7 @@ const Model = ({
       });
 
       box.setFromObject(group);
-    } else {
+    } else if (ext == "stl") {
       const geometry = modelObject as THREE.BufferGeometry;
       geometry.computeVertexNormals();
       geometry.computeBoundingBox();
@@ -132,9 +134,9 @@ const Model = ({
       box.getSize(size);
       onLoaded({ x: size.x, y: size.y, z: size.z });
     }
-  }, [modelObject, is3MF, onLoaded]);
+  }, [modelObject, ext, onLoaded]);
 
-  if (is3MF) {
+  if (ext == "3mf") {
     // 3MF files are typically Z-up. The Stage component often handles orientation well,
     // but we return a primitive group here.
     return <primitive object={modelObject} />;
@@ -151,6 +153,26 @@ const Model = ({
   );
 };
 
+function StepModel({ url }) {
+  const [obj, setObj] = useState(null);
+  useEffect(() => {
+    async function load() {
+      const urlpath = API_BASE_URL + url;
+      const mainObject = await LoadStep(urlpath);
+      setObj(mainObject);
+    }
+    load();
+  }, []);
+  if (!obj) {
+    return null;
+  }
+  return (
+    <mesh geometry={obj as THREE.BufferGeometry} castShadow receiveShadow>
+      <meshStandardMaterial color="#3b82f6" roughness={0.3} metalness={0.1} />
+    </mesh>
+  );
+}
+
 const Viewer3D: React.FC<Viewer3DProps> = ({
   url,
   filename,
@@ -163,8 +185,24 @@ const Viewer3D: React.FC<Viewer3DProps> = ({
 
   const unsupportedFormat = useMemo(() => {
     const lower = filename.toLowerCase();
-    if (lower.endsWith(".stl") || lower.endsWith(".3mf")) return null;
+    if (
+      lower.endsWith(".stl") ||
+      lower.endsWith(".3mf") ||
+      lower.endsWith(".stp") ||
+      lower.endsWith("step")
+    )
+      return null;
     return "UNSUPPORTED";
+  }, [filename]);
+
+  const format = useMemo(() => {
+    if (
+      filename.toLowerCase().split(".").pop() == "step" ||
+      filename.toLowerCase().split(".").pop() == "stp"
+    ) {
+      return "stp";
+    }
+    return filename.toLowerCase().split(".").pop();
   }, [filename]);
 
   // Reset error when url changes
@@ -178,7 +216,7 @@ const Viewer3D: React.FC<Viewer3DProps> = ({
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen().catch((err) => {
         console.error(
-          `Error attempting to enable fullscreen mode: ${err.message} (${err.name})`
+          `Error attempting to enable fullscreen mode: ${err.message} (${err.name})`,
         );
       });
     } else {
@@ -221,42 +259,37 @@ const Viewer3D: React.FC<Viewer3DProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full bg-gradient-to-br from-vault-800 to-vault-900 rounded-lg overflow-hidden relative group ${
+      className={`w-full h-full overflow-hidden relative group ${
         isFullscreen ? "flex items-center justify-center" : ""
       }`}
     >
-      <Canvas shadows camera={{ position: [0, 0, 15], fov: 50 }}>
+      <Canvas shadows camera={{ position: [0, 0, 295], fov: 50 }}>
         {/* Reduced ambient light to allow the Stage directional lighting to create contrast/shadows */}
         <ambientLight intensity={0.4} />
-        <Suspense
-          fallback={
-            <Html center>
-              <div className="text-white animate-pulse text-sm">
-                Loading Model...
-              </div>
-            </Html>
-          }
-        >
-          <Stage environment="city" intensity={1} adjustCamera>
-            <Center>
-              <ErrorBoundary onError={() => setError(true)}>
+
+        <Stage environment="city" intensity={1} adjustCamera>
+          <Center>
+            <ErrorBoundary onError={() => setError(true)}>
+              {format == "stp" ? (
+                <StepModel url={url} />
+              ) : (
                 <Model
                   url={url}
                   filename={filename}
                   thumbnail={thumbnail}
                   onLoaded={onLoaded}
                 />
-              </ErrorBoundary>
-            </Center>
-          </Stage>
-          <Grid
-            infiniteGrid
-            fadeDistance={50}
-            sectionColor="#475569"
-            cellColor="#334155"
-          />
-          <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />
-        </Suspense>
+              )}
+            </ErrorBoundary>
+          </Center>
+        </Stage>
+        <Grid
+          infiniteGrid
+          fadeDistance={50}
+          sectionColor="#475569"
+          cellColor="#334155"
+        />
+        <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />
       </Canvas>
 
       {/* Controls Overlay */}
