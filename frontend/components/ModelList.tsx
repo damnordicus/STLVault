@@ -53,7 +53,7 @@ interface ModelListProps {
   // Selection Props
   selectedIds: Set<string>;
   onToggleSelection: (id: string) => void;
-  onSelectAll: () => void;
+  onSelectAll: (filtered) => void;
   onClearSelection: () => void;
 
   // Folder Interaction Props
@@ -568,6 +568,9 @@ const ModelList: React.FC<ModelListProps> = ({
                       <Tooltip title="Download">
                         <IconButton
                           aria-label="download"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
                           href={api.getDownloadUrl(model)}
                         >
                           <DownloadIcon />
@@ -576,6 +579,9 @@ const ModelList: React.FC<ModelListProps> = ({
                       <Tooltip title="Open in Slicer">
                         <IconButton
                           aria-label="open in slicer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
                           href={api.getSlicerUrl(model)}
                         >
                           <ScreenShareIcon />
