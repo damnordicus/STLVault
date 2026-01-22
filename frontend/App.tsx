@@ -635,6 +635,7 @@ const App = () => {
                 <ModelList
                   models={filteredModels}
                   folders={filteredFolders}
+                  currentFolderName={currentFolderName}
                   onUpload={(files) => handleUpload(files)}
                   onImport={handleOpenImport}
                   onSelectModel={(m) => setSelectedModelId(m.id)}

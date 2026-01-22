@@ -44,6 +44,7 @@ import InputLabel from "@mui/material/InputLabel";
 interface ModelListProps {
   models: STLModel[];
   folders: Folder[];
+  currentFolderName: string;
   onUpload: (files: FileList) => void;
   onImport: () => void;
   onSelectModel: (model: STLModel) => void;
@@ -73,6 +74,7 @@ type SortOption =
 const ModelList: React.FC<ModelListProps> = ({
   models,
   folders,
+  currentFolderName,
   onUpload,
   onImport,
   onSelectModel,
@@ -258,7 +260,7 @@ const ModelList: React.FC<ModelListProps> = ({
                 alignItems: "baseline",
               }}
             >
-              <Typography variant="h4">Model Library</Typography>
+              <Typography variant="h4">{currentFolderName}</Typography>
               <Typography variant="body1" sx={{ color: "text.secondary" }}>
                 {processedFolders.length}{" "}
                 {processedFolders.length === 1 ? "folder • " : "folders • "}
