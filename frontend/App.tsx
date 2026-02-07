@@ -340,6 +340,26 @@ const App = () => {
     setSelectedOptions(newSet);
   };
 
+  const handleUpdateSTEPThumbnail = async (newModel: STLModel) => {
+    let tbuff = await fetch(port + newModel.url).then((response) => {
+      return response;
+    });
+    let thumbnailBuffer = await tbuff.bytes().then((bytes) => {
+      return bytes;
+    });
+    try {
+      let thumbnail = await generateThumbnail(
+        new File([thumbnailBuffer], newModel.name),
+      );
+      let newerModel = await api.updateModel(newModel.id, {
+        thumbnail: thumbnail,
+      });
+      setModels((prev) => [newerModel, ...prev]);
+    } catch (e) {
+      console.warn("Thumbnail generation failed, uploading without thumbnail");
+    }
+  };
+
   const handleImportChoice = async () => {
     if (!importUrl || !importFolderId) return;
 
@@ -357,8 +377,8 @@ const App = () => {
             importFolderId,
             model.typeName,
           );
+          await handleUpdateSTEPThumbnail(newModel);
           setUploadQueue((prev) => prev - 1);
-          setModels((prev) => [newModel, ...prev]);
         }
       }
     } catch (error) {
