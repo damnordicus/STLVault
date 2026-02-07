@@ -4,7 +4,6 @@ import re
 import base64
 
 
-
 MODELQUERY = """
 query ModelFiles($id: ID!) {
   model: print(id: $id) {
@@ -137,13 +136,14 @@ fragment Error on ErrorType {
 }
 """
 
-class PrintablesImporter():
-    '''Handles the import from printables site
-    '''
+
+class PrintablesImporter:
+    """Handles the import from printables site"""
+
     def __init__(self):
         self.session: requests.Session
         self.graphurl = "https://api.printables.com/graphql/"
-        self.clientId= ""
+        self.clientId = ""
         self.fileResult: bool
         self.fileDownloadLink = ""
 
@@ -160,15 +160,15 @@ class PrintablesImporter():
         if response.status_code != 200:
             return response.status_code
 
-        self.clientId = re.search("data-client-uid=\"(([a-z0-9-])+)", response.text)[1]
+        self.clientId = re.search('data-client-uid="(([a-z0-9-])+)', response.text)[1]
 
         return True
-    
+
     def _get_model_info(self, modelId):
         header = {
             "accept": "application/graphql-response+json, application/graphql+json, application/json, text/event-stream, multipart/mixed",
             "accept-language": "en",
-            "client-uid" : self.clientId,
+            "client-uid": self.clientId,
             "cache-control": "no-cache",
             "content-type": "application/json",
             "graphql-client-version": "v3.0.11",
@@ -178,34 +178,39 @@ class PrintablesImporter():
         }
         variables = {"id": modelId}
 
-        response = self.session.post(self.graphurl, json={'query': MODELQUERY , 'variables': variables}, headers=header)
+        response = self.session.post(
+            self.graphurl,
+            json={"query": MODELQUERY, "variables": variables},
+            headers=header,
+        )
 
         if response.status_code != 200:
             return response.status_code
-        
+
         modelData = response.json()
         modelCollection = []
         try:
             for model in modelData["data"]["model"]["stls"]:
                 modelCollection.append(
-                  {
-                    "parentId": modelId,
-                    "id": model["id"],
-                    "name": model["name"],
-                    "folder": model["folder"],
-                    "previewPath": "https://files.printables.com/" + model["filePreviewPath"],
-                    "typeName": model["name"].split(".")[-1],
-                  }
+                    {
+                        "parentId": modelId,
+                        "id": model["id"],
+                        "name": model["name"],
+                        "folder": model["folder"],
+                        "previewPath": "https://files.printables.com/"
+                        + model["filePreviewPath"],
+                        "typeName": model["name"].split(".")[-1],
+                    }
                 )
             return modelCollection
         except Exception as e:
             raise e
-        
+
     def _get_file(self, modelId, parentId):
         header = {
             "accept": "application/graphql-response+json, application/graphql+json, application/json, text/event-stream, multipart/mixed",
             "accept-language": "en",
-            "client-uid" : self.clientId,
+            "client-uid": self.clientId,
             "cache-control": "no-cache",
             "content-type": "application/json",
             "graphql-client-version": "v3.0.11",
@@ -213,15 +218,26 @@ class PrintablesImporter():
             "priority": "u=1, i",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
         }
-        variables = {"fileType":"stl","id":modelId,"modelId":parentId,"source":"model_detail"}
+        variables = {
+            "fileType": "stl",
+            "id": modelId,
+            "modelId": parentId,
+            "source": "model_detail",
+        }
 
-        response = self.session.post(self.graphurl, json={'query': FILEQUERY , 'variables': variables}, headers=header)
+        response = self.session.post(
+            self.graphurl,
+            json={"query": FILEQUERY, "variables": variables},
+            headers=header,
+        )
         if response.status_code != 200:
             return None
         fileData = response.json()
         try:
             self.fileResult = fileData["data"]["getDownloadLink"]["ok"]
-            self.fileDownloadLink = fileData["data"]["getDownloadLink"]["output"]["link"]
+            self.fileDownloadLink = fileData["data"]["getDownloadLink"]["output"][
+                "link"
+            ]
         except Exception as e:
             raise e
 
@@ -229,32 +245,34 @@ class PrintablesImporter():
             fileheader = {
                 "accept": "application/graphql-response+json, application/graphql+json, application/json, text/event-stream, multipart/mixed",
                 "accept-language": "en",
-                "client-uid" : self.clientId,
+                "client-uid": self.clientId,
                 "cache-control": "no-cache",
                 "pragma": "no-cache",
                 "priority": "u=1, i",
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
             }
-            file = self.session.get(self.fileDownloadLink, allow_redirects=True, headers=fileheader)
+            file = self.session.get(
+                self.fileDownloadLink, allow_redirects=True, headers=fileheader
+            )
             return file
-    
+
     def _make_thumbnail(self, url):
         if len(url) > 5:
             fileheader = {
-                  "accept": "image/*, application/json, text/event-stream, multipart/mixed",
-                  "accept-language": "en",
-                  "client-uid" : self.clientId,
-                  "cache-control": "no-cache",
-                  "pragma": "no-cache",
-                  "priority": "u=1, i",
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+                "accept": "image/*, application/json, text/event-stream, multipart/mixed",
+                "accept-language": "en",
+                "client-uid": self.clientId,
+                "cache-control": "no-cache",
+                "pragma": "no-cache",
+                "priority": "u=1, i",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
             }
             file = self.session.get(url, allow_redirects=True, headers=fileheader)
             encoded_string = base64.b64encode(file.content)
             return "data:image/png;base64," + encoded_string.decode()
-        
+
         return ""
-    
+
     def importfromId(self, modelId, parentId, previewPath):
         self.session = requests.Session()
         try:

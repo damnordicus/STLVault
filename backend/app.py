@@ -468,7 +468,7 @@ def import_model_by_id(payload: dict):
     # we only save stl for now
     ext = typeName if typeName is not None else ".stl"
     
-    filename = f"{mid}{ext}"
+    filename = f"{mid}.{ext}"
     path = os.path.join(UPLOAD_DIR, filename)
 
     # Check if url is not None before calling importer
