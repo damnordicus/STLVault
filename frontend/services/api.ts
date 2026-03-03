@@ -1,13 +1,26 @@
 import { Folder, STLModel, StorageStats, STLModelCollection } from "../types";
 import { v4 as uuidv4 } from "uuid";
+import { BASE_URL } from "./apiBase";
 
-let API_BASE_URL = "";
+const API_BASE_URL = BASE_URL + "/api";
 
-if (localStorage.getItem("api-port-override")) {
-  API_BASE_URL = localStorage.getItem("api-port-override") + "/api";
-} else {
-  const url = import.meta.env.VITE_API_URL + "/api";
-  API_BASE_URL = url;
+const TOKEN_KEY = "stlvault_auth_token";
+
+// Authenticated fetch — injects Bearer token and redirects on 401
+async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.href = "/login";
+  }
+  return res;
 }
 
 // --- API SERVICE ---
@@ -15,7 +28,7 @@ if (localStorage.getItem("api-port-override")) {
 export const api = {
   // 1. GET Folders
   getFolders: async (): Promise<Folder[]> => {
-    const res = await fetch(`${API_BASE_URL}/folders`);
+    const res = await authFetch(`${API_BASE_URL}/folders`);
     if (!res.ok) throw new Error("Failed to fetch folders");
     return res.json();
   },
@@ -25,7 +38,7 @@ export const api = {
     name: string,
     parentId: string | null = null,
   ): Promise<Folder> => {
-    const res = await fetch(`${API_BASE_URL}/folders`, {
+    const res = await authFetch(`${API_BASE_URL}/folders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, parentId }),
@@ -36,7 +49,7 @@ export const api = {
 
   // 3. UPDATE Folder (Rename/Move)
   updateFolder: async (id: string, name: string): Promise<Folder> => {
-    const res = await fetch(`${API_BASE_URL}/folders/${id}`, {
+    const res = await authFetch(`${API_BASE_URL}/folders/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
@@ -47,7 +60,7 @@ export const api = {
 
   // 4. DELETE Folder
   deleteFolder: async (id: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/folders/${id}`, {
+    const res = await authFetch(`${API_BASE_URL}/folders/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error("Delete failed");
@@ -56,7 +69,7 @@ export const api = {
   // 5. GET Models
   getModels: async (folderId?: string): Promise<STLModel[]> => {
     const query = folderId && folderId !== "all" ? `?folderId=${folderId}` : "";
-    const res = await fetch(`${API_BASE_URL}/models${query}`);
+    const res = await authFetch(`${API_BASE_URL}/models${query}`);
     if (!res.ok) throw new Error("Failed to fetch models");
     return res.json();
   },
@@ -74,7 +87,7 @@ export const api = {
     if (thumbnail) formData.append("thumbnail", thumbnail); // Send base64 thumbnail
     if (tags.length > 0) formData.append("tags", JSON.stringify(tags));
 
-    const res = await fetch(`${API_BASE_URL}/models/upload`, {
+    const res = await authFetch(`${API_BASE_URL}/models/upload`, {
       method: "POST",
       body: formData,
     });
@@ -88,7 +101,7 @@ export const api = {
     id: string,
     updates: Partial<STLModel>,
   ): Promise<STLModel> => {
-    const res = await fetch(`${API_BASE_URL}/models/${id}`, {
+    const res = await authFetch(`${API_BASE_URL}/models/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
@@ -101,7 +114,7 @@ export const api = {
   deleteModel: async (id: string): Promise<void> => {
     console.log("API: Deleting model", id);
 
-    const res = await fetch(`${API_BASE_URL}/models/${id}`, {
+    const res = await authFetch(`${API_BASE_URL}/models/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error("Delete failed");
@@ -109,12 +122,16 @@ export const api = {
 
   // 9. GET Download URL
   getDownloadUrl: (model: STLModel) => {
-    return `${API_BASE_URL}/models/${model.id}/download`;
+    const token = localStorage.getItem(TOKEN_KEY);
+    const qs = token ? `?token=${encodeURIComponent(token)}` : "";
+    return `${API_BASE_URL}/models/${model.id}/download${qs}`;
   },
 
   //9b. GET slicer Weblink
   getSlicerUrl: (model: STLModel) => {
-    const modelURL = `${API_BASE_URL}/models/${model.id}/download`;
+    const token = localStorage.getItem(TOKEN_KEY);
+    const qs = token ? `?token=${encodeURIComponent(token)}` : "";
+    const modelURL = `${API_BASE_URL}/models/${model.id}/download${qs}`;
 
     // Get user's preferred slicer from localStorage
     const slicerPreference =
@@ -136,7 +153,7 @@ export const api = {
   bulkDeleteModels: async (ids: string[]): Promise<void> => {
     console.log("API: Bulk deleting models", ids);
 
-    const res = await fetch(`${API_BASE_URL}/models/bulk-delete`, {
+    const res = await authFetch(`${API_BASE_URL}/models/bulk-delete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids }),
@@ -146,7 +163,7 @@ export const api = {
 
   // 11. BULK MOVE
   bulkMoveModels: async (ids: string[], folderId: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/models/bulk-move`, {
+    const res = await authFetch(`${API_BASE_URL}/models/bulk-move`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids, folderId }),
@@ -156,7 +173,7 @@ export const api = {
 
   // 12. BULK TAG
   bulkAddTags: async (ids: string[], tags: string[]): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/models/bulk-tag`, {
+    const res = await authFetch(`${API_BASE_URL}/models/bulk-tag`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids, tags }),
@@ -166,7 +183,7 @@ export const api = {
 
   // 13. RETRIEVE MODEL OPTIONS
   retrieveModelOptions: async (url: string): Promise<STLModelCollection[]> => {
-    const res = await fetch(`${API_BASE_URL}/printables/options`, {
+    const res = await authFetch(`${API_BASE_URL}/printables/options`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
@@ -184,7 +201,7 @@ export const api = {
     folderId: string,
     typeName: string,
   ): Promise<STLModel> => {
-    const res = await fetch(`${API_BASE_URL}/printables/importid`, {
+    const res = await authFetch(`${API_BASE_URL}/printables/importid`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -210,7 +227,7 @@ export const api = {
     formData.append("file", file);
     if (thumbnail) formData.append("thumbnail", thumbnail);
 
-    const res = await fetch(`${API_BASE_URL}/models/${id}/file`, {
+    const res = await authFetch(`${API_BASE_URL}/models/${id}/file`, {
       method: "PUT",
       body: formData,
     });
@@ -223,7 +240,7 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(`${API_BASE_URL}/models/${id}/thumbnail`, {
+    const res = await authFetch(`${API_BASE_URL}/models/${id}/thumbnail`, {
       method: "PUT",
       body: formData,
     });
@@ -233,8 +250,42 @@ export const api = {
 
   // 15. GET Storage Stats
   getStorageStats: async (): Promise<StorageStats> => {
-    const res = await fetch(`${API_BASE_URL}/storage-stats`);
+    const res = await authFetch(`${API_BASE_URL}/storage-stats`);
     if (!res.ok) throw new Error("Failed to fetch storage stats");
+    return res.json();
+  },
+
+  // 16. GET My Models (uploaded by current user)
+  getMyModels: async (): Promise<STLModel[]> => {
+    const res = await authFetch(`${API_BASE_URL}/my-models`);
+    if (!res.ok) throw new Error("Failed to fetch your models");
+    return res.json();
+  },
+
+  // 17. ADMIN: GET pending models
+  getAdminPending: async (): Promise<STLModel[]> => {
+    const res = await authFetch(`${API_BASE_URL}/admin/pending`);
+    if (!res.ok) throw new Error("Failed to fetch pending models");
+    return res.json();
+  },
+
+  // 18. ADMIN: approve a model
+  approveModel: async (id: string): Promise<STLModel> => {
+    const res = await authFetch(`${API_BASE_URL}/admin/models/${id}/approve`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error("Approve failed");
+    return res.json();
+  },
+
+  // 19. ADMIN: deny a model
+  denyModel: async (id: string, reason: string): Promise<STLModel> => {
+    const res = await authFetch(`${API_BASE_URL}/admin/models/${id}/deny`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) throw new Error("Deny failed");
     return res.json();
   },
 };

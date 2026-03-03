@@ -28,6 +28,9 @@ export interface STLModel {
   description: string;
   dimensions?: { x: number; y: number; z: number };
   thumbnail?: string;
+  status?: "pending" | "approved" | "denied";
+  denial_reason?: string | null;
+  uploaded_by_email?: string | null;
 }
 
 export interface STLModelCollection {

@@ -21,19 +21,12 @@ import JSZip from "jszip";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { useVisualViewport } from "./hooks/useVisualViewport";
 import Snackbar, { SnackbarCloseReason } from "@mui/material/Snackbar";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
 import Alert from "@mui/material/Alert";
 
 const App = () => {
   const isDesktop = useMediaQuery("(min-width: 1024px)", true);
   const isMobile = !isDesktop;
   const visualViewport = useVisualViewport();
-  const darkTheme = createTheme({
-    palette: {
-      mode: "dark",
-    },
-  });
   const [folders, setFolders] = useState<Folder[]>([]);
   const [models, setModels] = useState<STLModel[]>([]);
   const [storageStats, setStorageStats] = useState<StorageStats>({
@@ -56,6 +49,8 @@ const App = () => {
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
   const [bulkTags, setBulkTags] = useState("");
+
+  const [showPendingSnackbar, setShowPendingSnackbar] = useState(false);
 
   // Upload Modal State
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -86,11 +81,14 @@ const App = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [fetchedFolders, fetchedModels, fetchedStats] = await Promise.all(
-          [api.getFolders(), api.getModels("all"), api.getStorageStats()],
+        const [fetchedFolders, fetchedModels, fetchedStats, myModels] = await Promise.all(
+          [api.getFolders(), api.getModels("all"), api.getStorageStats(), api.getMyModels()],
         );
         setFolders(fetchedFolders);
-        setModels(fetchedModels);
+        // Merge own pending/denied models so the uploader can see them in the vault
+        const approvedIds = new Set(fetchedModels.map((m) => m.id));
+        const ownPending = myModels.filter((m) => !approvedIds.has(m.id));
+        setModels([...fetchedModels, ...ownPending]);
         setStorageStats(fetchedStats);
       } catch (error) {
         console.error("Failed to fetch initial data:", error);
@@ -246,6 +244,9 @@ const App = () => {
           tags,
         );
         setModels((prev) => [newModel, ...prev]);
+        if (newModel.status === "pending") {
+          setShowPendingSnackbar(true);
+        }
       } catch (error) {
         console.error(`Failed to upload ${file.name}:`, error);
       } finally {
@@ -354,6 +355,9 @@ const App = () => {
         thumbnail: thumbnail,
       });
       setModels((prev) => [newerModel, ...prev]);
+      if (newerModel.status === "pending") {
+        setShowPendingSnackbar(true);
+      }
     } catch (e) {
       console.warn("Thumbnail generation failed, uploading without thumbnail");
     }
@@ -558,9 +562,7 @@ const App = () => {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <div
+    <div
         className={`${
           isDesktop ? "flex" : "flex flex-col"
         } h-dvh text-slate-200 font-sans selection:bg-blue-500/30 overflow-hidden`}
@@ -661,6 +663,7 @@ const App = () => {
                   models={filteredModels}
                   folders={filteredFolders}
                   currentFolderName={currentFolderName}
+                  isAllView={currentFolderId === "all"}
                   onBackNavigation={() => {
                     setCurrentFolderId(currentFolderParentId);
                   }}
@@ -1290,8 +1293,22 @@ const App = () => {
             API Host Not Set
           </Alert>
         </Snackbar>
+        <Snackbar
+          open={showPendingSnackbar}
+          autoHideDuration={6000}
+          onClose={() => setShowPendingSnackbar(false)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity="info"
+            variant="filled"
+            onClose={() => setShowPendingSnackbar(false)}
+            sx={{ width: "100%" }}
+          >
+            Upload submitted — pending admin review before appearing in the vault.
+          </Alert>
+        </Snackbar>
       </div>
-    </ThemeProvider>
   );
 };
 

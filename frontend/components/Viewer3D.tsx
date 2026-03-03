@@ -40,6 +40,14 @@ if (localStorage.getItem("api-port-override")) {
   API_BASE_URL = url;
 }
 
+const TOKEN_KEY = "stlvault_auth_token";
+
+function authedModelUrl(url: string): string {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const qs = token ? `?token=${encodeURIComponent(token)}` : "";
+  return API_BASE_URL + url + qs;
+}
+
 // Defined before usage to ensure proper type resolution
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -100,7 +108,7 @@ const Model = ({
   const Loader = ext == "3mf" ? ThreeMFLoader : STLLoader;
 
   // Use the appropriate loader
-  const urlpath = API_BASE_URL + url;
+  const urlpath = authedModelUrl(url);
   let data = useLoader(Loader as any, urlpath);
 
   const modelObject = useMemo(() => {
@@ -192,7 +200,7 @@ const StepModel = ({
   const [obj, setObj] = useState(null);
   useEffect(() => {
     async function load() {
-      const urlpath = API_BASE_URL + url;
+      const urlpath = authedModelUrl(url);
       const mainObject = await LoadStep(urlpath);
       setObj(mainObject);
     }

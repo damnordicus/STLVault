@@ -41,10 +41,13 @@ import FormControl from "@mui/material/FormControl";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import InputLabel from "@mui/material/InputLabel";
 
+const RECENT_LIMIT = 5;
+
 interface ModelListProps {
   models: STLModel[];
   folders: Folder[];
   currentFolderName: string;
+  isAllView?: boolean;
   onBackNavigation: () => void;
   onUpload: (files: FileList) => void;
   onImport: () => void;
@@ -76,6 +79,7 @@ const ModelList: React.FC<ModelListProps> = ({
   models,
   folders,
   currentFolderName,
+  isAllView = false,
   onBackNavigation,
   onUpload,
   onImport,
@@ -122,7 +126,7 @@ const ModelList: React.FC<ModelListProps> = ({
   }, []);
 
   const processedModels = useMemo(() => {
-    let result = [...models];
+    let result = [...models].filter(model => model.status === "approved");
 
     // Filter by search
     if (searchQuery.trim()) {
@@ -154,8 +158,13 @@ const ModelList: React.FC<ModelListProps> = ({
       }
     });
 
+    // In "All Models" view with no search, show only the most recent N models
+    if (isAllView && !searchQuery.trim()) {
+      result = result.slice(0, RECENT_LIMIT);
+    }
+
     return result;
-  }, [models, searchQuery, sortBy]);
+  }, [models, searchQuery, sortBy, isAllView]);
 
   const processedFolders = useMemo(() => {
     let result = [...folders];
@@ -266,10 +275,9 @@ const ModelList: React.FC<ModelListProps> = ({
               <Typography variant="body1" sx={{ color: "text.secondary" }}>
                 {processedFolders.length}{" "}
                 {processedFolders.length === 1 ? "folder • " : "folders • "}
-                {processedModels.length}{" "}
-                {processedModels.length === 1 ? "model" : "models"}
-                {models.length !== processedModels.length &&
-                  ` ( filtered from: ${models.length} )`}
+                {isAllView && !searchQuery.trim()
+                  ? `${processedModels.length} recent`
+                  : `${processedModels.length} ${processedModels.length === 1 ? "model" : "models"}${models.length !== processedModels.length ? ` (filtered from ${models.length})` : ""}`}
               </Typography>
             </Stack>
           </div>
@@ -450,7 +458,7 @@ const ModelList: React.FC<ModelListProps> = ({
             Back
           </Button>
           {/* Folders */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 pb-5 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 pb-5 pt-2">
             {/* Render Folders First */}
             {processedFolders.map((folder) => (
               <div
@@ -507,8 +515,18 @@ const ModelList: React.FC<ModelListProps> = ({
           </div>
 
           {/* Files */}
+          {isAllView && !searchQuery.trim() && processedModels.length > 0 && (
+            <Typography variant="subtitle2" sx={{ mb: 1, color: "text.secondary" }}>
+              Recent uploads
+            </Typography>
+          )}
+          {isAllView && searchQuery.trim() && (
+            <Typography variant="subtitle2" sx={{ mb: 1, color: "text.secondary" }}>
+              Search results across all folders
+            </Typography>
+          )}
           <div
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 pb-24"
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 pb-24"
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -548,7 +566,16 @@ const ModelList: React.FC<ModelListProps> = ({
                   }}
                   className={`group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 relative active:cursor-grabbing`}
                 >
-                  <Card raised={isSelected}>
+                  <Card
+                    raised={isSelected}
+                    sx={
+                      model.status === "denied"
+                        ? { border: 1, borderColor: "error.dark" }
+                        : model.status === "pending"
+                          ? { border: 1, borderColor: "warning.dark" }
+                          : {}
+                    }
+                  >
                     <CardActionArea>
                       {model.thumbnail ? (
                         <CardMedia
@@ -608,6 +635,22 @@ const ModelList: React.FC<ModelListProps> = ({
                           {" MB  • "}
                           {new Date(model.dateAdded).toLocaleDateString()}
                         </Typography>
+                        {model.status === "pending" && (
+                          <Chip
+                            label="Pending review"
+                            color="warning"
+                            size="small"
+                            sx={{ mt: 0.5, borderRadius: 1 }}
+                          />
+                        )}
+                        {model.status === "denied" && (
+                          <Chip
+                            label="Denied"
+                            color="error"
+                            size="small"
+                            sx={{ mt: 0.5, borderRadius: 1 }}
+                          />
+                        )}
                       </CardContent>
                     </CardActionArea>
                     <CardActions>
