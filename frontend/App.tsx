@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import ModelList from "./components/ModelList";
 import DetailPanel from "./components/DetailPanel";
-import Settings from "./components/Settings";
 import Navbar from "./components/Navbar";
 import { STLModel, Folder, StorageStats, STLModelCollection } from "./types";
 import { generateThumbnail } from "./services/thumbnailGenerator";
@@ -22,6 +21,7 @@ import { useMediaQuery } from "./hooks/useMediaQuery";
 import { useVisualViewport } from "./hooks/useVisualViewport";
 import Snackbar, { SnackbarCloseReason } from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import { APP_NAME } from "./contexts/constants";
 
 const App = () => {
   const isDesktop = useMediaQuery("(min-width: 1024px)", true);
@@ -39,7 +39,6 @@ const App = () => {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadQueue, setUploadQueue] = useState<number>(0);
-  const [showSettings, setShowSettings] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobileSidebarMounted, setIsMobileSidebarMounted] = useState(false);
   const [isMobileSidebarVisible, setIsMobileSidebarVisible] = useState(false);
@@ -586,11 +585,10 @@ const App = () => {
   return (
     <div className="flex flex-col h-dvh text-slate-200 font-sans selection:bg-blue-500/30 overflow-hidden">
         <Navbar
-          title="STL Vault"
-          subtitle={!isDesktop && !showSettings ? currentFolderName : undefined}
+          title={APP_NAME.full}
+          subtitle={!isDesktop ? currentFolderName : undefined}
           onOpenSidebar={!isDesktop ? () => setIsMobileSidebarOpen(true) : undefined}
-          onOpenSettings={() => setShowSettings(true)}
-          showMenuButton={!isDesktop && !showSettings}
+          showMenuButton={!isDesktop}
         />
 
         <div className="flex flex-1 overflow-hidden">
@@ -603,7 +601,6 @@ const App = () => {
             onSelectFolder={(id) => {
               setCurrentFolderId(id);
               setSelectedModelId(null);
-              setShowSettings(false);
             }}
             onCreateFolder={handleCreateFolder}
             onRenameFolder={handleRenameFolder}
@@ -612,7 +609,6 @@ const App = () => {
             onUploadToFolder={(folderId, files) =>
               handleUpload(files, folderId)
             }
-            onOpenSettings={() => setShowSettings(true)}
             variant="desktop"
           />
         )}
@@ -640,7 +636,6 @@ const App = () => {
                     onSelectFolder={(id) => {
                       setCurrentFolderId(id);
                       setSelectedModelId(null);
-                      setShowSettings(false);
                       setIsMobileSidebarOpen(false);
                     }}
                     onCreateFolder={handleCreateFolder}
@@ -650,21 +645,13 @@ const App = () => {
                     onUploadToFolder={(folderId, files) =>
                       handleUpload(files, folderId)
                     }
-                    onOpenSettings={() => {
-                      setShowSettings(true);
-                      setIsMobileSidebarOpen(false);
-                    }}
                     variant="mobile"
                   />
                 </div>
               </div>
         )}
 
-        {/* Settings View */}
-        {showSettings ? (
-          <Settings onBack={() => setShowSettings(false)} />
-        ) : (
-          <>
+        <>
             <main className="flex-1 flex overflow-hidden relative">
               {isLoading ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-vault-900 z-50">
@@ -1348,7 +1335,6 @@ const App = () => {
               )}
             </main>
           </>
-        )}
         </div>
         <Snackbar
           open={port === "TERA_API_URL"}

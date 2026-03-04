@@ -1,21 +1,20 @@
 import React from 'react';
-import { Menu, Settings as SettingsIcon, LogOut, LayoutDashboard, UserRound, ShieldCheck } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { APP_NAME, NAV_OPTIONS } from '@/contexts/constants';
 
 interface NavbarProps {
 	title?: string;
 	subtitle?: string;
 	onOpenSidebar?: () => void;
-	onOpenSettings?: () => void;
 	showMenuButton?: boolean;
 }
 
 const Navbar: React.FC<NavbarProps> = ({
-	title = 'STL Vault',
+	title = APP_NAME.full,
 	subtitle,
 	onOpenSidebar,
-	onOpenSettings,
 	showMenuButton = true
 }) => {
 	const { logout, user } = useAuth();
@@ -28,7 +27,7 @@ const Navbar: React.FC<NavbarProps> = ({
 	};
 
 	const navBtn = (path: string) =>
-		`w-10 h-10 rounded-lg border flex items-center justify-center transition-colors ` +
+		`group h-10 rounded-lg border flex items-center overflow-hidden transition-all duration-200 px-3 ` +
 		(location.pathname === path
 			? 'bg-blue-600 border-blue-500 text-white'
 			: 'bg-vault-800 hover:bg-vault-700 border-vault-700 text-slate-200');
@@ -51,48 +50,26 @@ const Navbar: React.FC<NavbarProps> = ({
 				{subtitle && <div className="text-xs text-slate-400 truncate">{subtitle}</div>}
 			</div>
 
-			<button
-				type="button"
-				onClick={() => navigate('/dashboard')}
-				className={navBtn('/dashboard')}
-				aria-label="Dashboard"
-				title="Dashboard"
-			>
-				<LayoutDashboard className="w-5 h-5" />
-			</button>
+			{NAV_OPTIONS.filter((item) => !item.adminOnly || user?.is_superuser).map((item) => {
+				const Icon = item.icon;
+				return(
+					<button
+						key={item.link}
+						type="button"
+						onClick={() => navigate(item.link)}
+						className={navBtn(item.link)}
+						aria-label={item.label}
+					>
+						<span className="w-5 h-5 flex items-center justify-center flex-shrink-0 transition-all duration-200 ease-in-out group-hover:w-0 group-hover:opacity-0 overflow-hidden">
+							<Icon className="w-5 h-5 flex-shrink-0" />
+						</span>
+						<span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out group-hover:max-w-[8rem] group-hover:opacity-100">
+							{item.label}
+						</span>
+					</button>
+				)
+			})}
 
-			<button
-				type="button"
-				onClick={() => navigate('/profile')}
-				className={navBtn('/profile')}
-				aria-label="Profile"
-				title="Profile"
-			>
-				<UserRound className="w-5 h-5" />
-			</button>
-
-			{user?.is_superuser && (
-				<button
-					type="button"
-					onClick={() => navigate('/admin')}
-					className={navBtn('/admin')}
-					aria-label="Admin Dashboard"
-					title="Admin Dashboard"
-				>
-					<ShieldCheck className="w-5 h-5" />
-				</button>
-			)}
-
-			{onOpenSettings && (
-			<button
-				type="button"
-				onClick={onOpenSettings}
-				className="w-10 h-10 rounded-lg bg-vault-800 hover:bg-vault-700 border border-vault-700 flex items-center justify-center text-slate-200"
-				aria-label="Open settings"
-			>
-				<SettingsIcon className="w-5 h-5" />
-			</button>
-		)}
 
 			<button
 				type="button"

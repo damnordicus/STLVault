@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Folder as FolderIcon,
   Plus,
@@ -36,6 +37,7 @@ import Button from "@mui/material/Button";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import Badge from "@mui/material/Badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { APP_NAME } from "@/contexts/constants";
 
 const APP_TAG = import.meta.env.VITE_APP_TAG || "dev";
 
@@ -50,7 +52,6 @@ interface SidebarProps {
   onDeleteFolder: (id: string) => void;
   onMoveToFolder: (folderId: string, modelIds: string[]) => void;
   onUploadToFolder: (folderId: string, files: FileList) => void;
-  onOpenSettings: () => void;
   variant?: "desktop" | "mobile";
 }
 
@@ -65,9 +66,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDeleteFolder,
   onMoveToFolder,
   onUploadToFolder,
-  onOpenSettings,
   variant = "desktop",
 }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isDesktopVariant = variant === "desktop";
   const [isCreatingRoot, setIsCreatingRoot] = useState(false);
@@ -390,7 +391,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Box className="w-5 h-5 text-white pb-1" />
           </div>
           <Typography noWrap variant="h4">
-            STLVault
+            {APP_NAME.short}
           </Typography>
           <Typography
             noWrap
@@ -483,7 +484,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           variant="outlined"
           startIcon={<Settings />}
           color="info"
-          onClick={onOpenSettings}
+          onClick={() => navigate('/settings')}
           className="w-full"
           sx={{ alignItems: "center", justifyContent: "center" }}
         >

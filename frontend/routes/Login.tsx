@@ -7,6 +7,7 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { APP_NAME } from "@/contexts/constants";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -57,7 +58,7 @@ const Login: React.FC = () => {
         }}
       >
         <Typography variant="h5" fontWeight={700} textAlign="center">
-          STLVault
+          {APP_NAME.short}
         </Typography>
         <Typography variant="body2" color="text.secondary" textAlign="center">
           Sign in with your .mil account

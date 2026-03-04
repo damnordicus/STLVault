@@ -1,18 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Check,
   ChevronLeft,
   EthernetPort,
-  SettingsIcon,
-  TicketIcon,
   Wrench,
   X,
 } from "lucide-react";
-import { bool } from "three/tsl";
-
-interface SettingsProps {
-  onBack: () => void;
-}
+import { useNavigate } from "react-router-dom";
 
 type SlicerType = "orcaslicer" | "prusaslicer" | "bambu" | "cura";
 
@@ -28,7 +22,8 @@ const SLICERS: Record<SlicerType, SlicerConfig> = {
   cura: { name: "Cura", protocol: "cura://open?file=" },
 };
 
-const Settings: React.FC<SettingsProps> = ({ onBack }) => {
+const Settings: React.FC = () => {
+  const navigate = useNavigate();
   const [apiPortStatus, setApiPortStatus] = useState(false);
   // Initialize state directly from localStorage to prevent flash
   const [selectedSlicer, setSelectedSlicer] = useState<SlicerType>(() => {
@@ -70,7 +65,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex items-center gap-4">
           <button
-            onClick={onBack}
+            onClick={() => navigate(-1)}
             className="flex items-center justify-center w-10 h-10 rounded-lg bg-vault-700 hover:bg-vault-600 text-slate-300 hover:text-white transition-colors"
             aria-label="Go back"
           >

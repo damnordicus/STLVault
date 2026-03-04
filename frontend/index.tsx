@@ -15,6 +15,7 @@ import ForgotPassword from "./routes/ForgotPassword";
 import Dashboard from "./routes/Dashboard";
 import Profile from "./routes/Profile";
 import AdminDashboard from "./routes/AdminDashboard";
+import Settings from "./routes/Settings";
 
 const darkTheme = createTheme({ palette: { mode: "dark" } });
 
@@ -83,6 +84,10 @@ const RouterRoot: React.FC = () => (
     <Route
       path="/admin"
       element={<AdminRoute><AdminDashboard /></AdminRoute>}
+    />
+    <Route
+      path="/settings"
+      element={<ProtectedRoute><Settings /></ProtectedRoute>}
     />
     <Route
       path="/*"
