@@ -24,7 +24,7 @@ const ForgotPassword: React.FC = () => {
   return (
     <>
     <div
-      className="absolute inset-0 bg-cover bg-center bg-[url(assets/stlvault-background.png)] blur-sm"
+      className="absolute inset-0 bg-cover bg-center bg-[url(stlvault-background.png)] blur-sm"
     />
     <div
       className="absolute inset-0 bg-cover bg-center bg-black/60"
