@@ -1402,7 +1402,7 @@ const App = () => {
           </>
         </div>
         <Snackbar
-          open={port === "TERA_API_URL"}
+          open={!port}
           autoHideDuration={6000}
           message="API Host Not Set"
           anchorOrigin={{ vertical: "top", horizontal: "center" }}
