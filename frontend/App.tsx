@@ -74,7 +74,7 @@ const App = () => {
   );
   const [importUrl, setImportUrl] = useState("");
   const [importFolderId, setImportFolderId] = useState("");
-  const port = import.meta.env.VITE_API_URL;
+  const port = localStorage.getItem("api-port-override") ?? import.meta.env.VITE_API_URL ?? null;
   // Delete Confirmation State
   const [deleteConfirmState, setDeleteConfirmState] = useState<{
     isOpen: boolean;
@@ -812,7 +812,7 @@ const App = () => {
                   }}
                 >
                   <div
-                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-96 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
+                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
                     style={{
                       maxHeight: Math.max(
                         240,
@@ -1027,7 +1027,7 @@ const App = () => {
                   }}
                 >
                   <div
-                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-96 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
+                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
                     style={{
                       maxHeight: Math.max(
                         240,
@@ -1229,7 +1229,7 @@ const App = () => {
                   }}
                 >
                   <div
-                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-96 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
+                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
                     style={{
                       maxHeight: Math.max(
                         240,
@@ -1294,7 +1294,7 @@ const App = () => {
                   }}
                 >
                   <div
-                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-80 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
+                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-full max-w-xs shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
                     style={{
                       maxHeight: Math.max(
                         200,
@@ -1345,7 +1345,7 @@ const App = () => {
                   }}
                 >
                   <div
-                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-96 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
+                    className="bg-vault-800 border border-vault-600 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto"
                     style={{
                       maxHeight: Math.max(
                         240,
@@ -1402,7 +1402,7 @@ const App = () => {
           </>
         </div>
         <Snackbar
-          open={!port}
+          open={port == null}
           autoHideDuration={6000}
           message="API Host Not Set"
           anchorOrigin={{ vertical: "top", horizontal: "center" }}

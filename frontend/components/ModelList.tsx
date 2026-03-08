@@ -267,7 +267,7 @@ const ModelList: React.FC<ModelListProps> = ({
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
             <Stack
-              direction="row"
+              direction="column"
               spacing={2}
               sx={{
                 alignItems: "baseline",
@@ -284,19 +284,8 @@ const ModelList: React.FC<ModelListProps> = ({
             </Stack>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex justify-around md:flex-wrap gap-3 ">
             <Stack direction="row" spacing={2}>
-              {/* <Button
-                variant="outlined"
-                startIcon={<CheckSquare />}
-                onClick={() => onSelectAll(processedModels)}
-              >
-                {`${
-                  models.length === selectedIds.size
-                    ? "Unselect All"
-                    : "Select All"
-                } `}
-              </Button> */}
               <Button
                 variant="contained"
                 startIcon={<Globe />}
