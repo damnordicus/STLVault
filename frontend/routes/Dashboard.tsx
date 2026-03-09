@@ -137,7 +137,10 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-      <Navbar showMenuButton={false} />
+      <Box sx={{ position: "sticky", top: 0, zIndex: 100 }}>
+        <Navbar showMenuButton={false} />
+      </Box>
+
 
       <Box sx={{ maxWidth: 1200, mx: "auto", px: 3, py: 4 }}>
         {/* Welcome */}
