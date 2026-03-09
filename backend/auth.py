@@ -16,6 +16,7 @@ from models import User
 JWT_SECRET = os.getenv("JWT_SECRET", "INSECURE_CHANGE_IN_PRODUCTION")
 # 8-hour tokens — one working day
 JWT_LIFETIME_SECONDS = 8 * 3600
+AUTO_VERIFY = os.getenv("AUTO_VERIFY", "false").lower() == "true"
 
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
@@ -58,8 +59,11 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
     async def on_after_register(self, user: User, request: Optional[Request] = None):
         print(f"[AUTH] User registered: {user.email}")
-        # Automatically trigger email verification on registration
-        await self.request_verify(user, request)
+        if AUTO_VERIFY:
+            await self.user_db.update(user, {"is_verified": True})
+            print(f"[AUTH] Auto-verified user (AUTO_VERIFY=true): {user.email}")
+        else:
+            await self.request_verify(user, request)
 
     async def on_after_request_verify(
         self, user: User, token: str, request: Optional[Request] = None

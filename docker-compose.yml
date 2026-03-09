@@ -31,6 +31,7 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - SMTP_FROM=${SMTP_FROM:-noreply@stlvault.mil}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - AUTO_VERIFY=${AUTO_VERIFY:-false}
     ports:
       - "${API_PORT}:8080"
     volumes:
