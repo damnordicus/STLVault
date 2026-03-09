@@ -136,7 +136,7 @@ const Dashboard: React.FC = () => {
   const displayName = user?.display_name || user?.email?.split("@")[0] || "Soldier";
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default"}}>
       <Box sx={{ position: "sticky", top: 0, zIndex: 100 }}>
         <Navbar showMenuButton={false} />
       </Box>
