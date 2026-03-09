@@ -269,29 +269,21 @@ const App = () => {
   ) => {
     const files = Array.from(fileList);
 
-    // If dropping into the general area ("all") and not a specific folder drop
-    // We want to show the modal to let user pick a folder and add tags
-    if (!specificFolderId && currentFolderId === "all") {
-      setPendingFiles(files);
-      setBrowseFolderId(null);
-      setUploadTags("");
-      setUploadDescription("");
-      setUploadMode("existing");
-      setNewFolderName("");
-      setShowUploadModal(true);
+    // Drag-drop directly onto a sidebar folder — skip modal, upload immediately
+    if (specificFolderId) {
+      await executeUpload(files, specificFolderId, []);
       return;
     }
 
-    // Normal flow (specific folder target or current view is a folder)
-    const targetFolderId = specificFolderId || currentFolderId;
-
-    // Fallback if for some reason 'all' is passed without modal (shouldn't happen with above check)
-    const finalFolderId =
-      targetFolderId === "all" && folders.length > 0
-        ? folders[0].id
-        : targetFolderId;
-
-    await executeUpload(files, finalFolderId, []);
+    // All other cases (file picker button, general drag-drop): show modal
+    // Pre-select the current folder if the user is already inside one
+    setPendingFiles(files);
+    setBrowseFolderId(currentFolderId !== "all" ? currentFolderId : null);
+    setUploadTags("");
+    setUploadDescription("");
+    setUploadMode("existing");
+    setNewFolderName("");
+    setShowUploadModal(true);
   };
 
   const handleConfirmUpload = async (e: React.FormEvent) => {
