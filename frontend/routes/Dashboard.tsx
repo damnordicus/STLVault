@@ -119,6 +119,7 @@ const Dashboard: React.FC = () => {
   const [models, setModels] = useState<STLModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState("approved");
 
   useEffect(() => {
     api
@@ -163,8 +164,6 @@ const Dashboard: React.FC = () => {
           {[
             { label: "Models uploaded", value: models.length.toString() },
             { label: "Total size", value: formatSize(totalSize) },
-            ...(pendingCount > 0 ? [{ label: "Awaiting approval", value: pendingCount.toString() }] : []),
-            ...(deniedCount > 0 ? [{ label: "Denied", value: deniedCount.toString() }] : []),
           ].map((stat) => (
             <Box
               key={stat.label}
@@ -195,6 +194,17 @@ const Dashboard: React.FC = () => {
           <Typography variant="h6" fontWeight={600}>
             Your Uploads
           </Typography>
+        </Box>
+        <Box sx={{ display: "flex", gap: 2}}>
+          {["Approved", "Pending", "Denied"].map(item => 
+          <div 
+          onClick={() => {
+            if(filter !== item.toLowerCase()){
+              setFilter(item.toLowerCase())
+            }
+          }}
+          className={`border border-1 ${filter === item.toLowerCase() ? 'border-white text-white': 'border-slate-600 text-slate-500'} rounded px-2 mb-4`}
+          >{item}</div>)}
         </Box>
 
         {loading && (
@@ -229,7 +239,7 @@ const Dashboard: React.FC = () => {
 
         {!loading && !error && models.length > 0 && (
           <Grid container spacing={2}>
-            {models.map((model) => (
+            {models.filter(item => item.status === filter).map((model) => (
               <Grid key={model.id} size={{ xs: 6, sm: 4, md: 3, lg: 2 }}>
                 <ModelCard model={model} />
               </Grid>

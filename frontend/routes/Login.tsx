@@ -58,8 +58,8 @@ const Login: React.FC = () => {
         onSubmit={handleSubmit}
         
         >
-        <Typography variant="h5" fontWeight={700} textAlign="center">
-          {APP_NAME.short}
+        <Typography variant="h4" fontWeight={700} textAlign="center">
+          {APP_NAME.full}
         </Typography>
         <Typography variant="body2" color="text.secondary" textAlign="center">
           Sign in with your .mil account
