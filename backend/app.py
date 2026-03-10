@@ -28,7 +28,9 @@ from auth import (
     get_user_manager,
 )
 from database import Base, async_session_maker, engine, get_async_session
-from importers import printables
+from urllib.parse import urlparse
+
+from importers import printables, thingiverse, makerworld
 from models import Folder, STLModel, User
 from schemas import UserCreate, UserRead, UserUpdate
 
@@ -171,6 +173,7 @@ def model_to_dict(m: STLModel) -> dict:
         "status": m.status or "approved",
         "denial_reason": m.denial_reason,
         "uploaded_by": m.uploaded_by,
+        "uploaded_by_email": None,
     }
 
 
@@ -301,7 +304,21 @@ async def get_models(
         result = await session.execute(
             select(STLModel).where(STLModel.status == "approved")
         )
-    return [model_to_dict(m) for m in result.scalars().all()]
+    models_list = result.scalars().all()
+
+    uploader_ids = [m.uploaded_by for m in models_list if m.uploaded_by]
+    users_map: dict = {}
+    if uploader_ids:
+        users_result = await session.execute(select(User))
+        for u in users_result.scalars().all():
+            users_map[str(u.id)] = u.email
+
+    enriched = []
+    for m in models_list:
+        d = model_to_dict(m)
+        d["uploaded_by_email"] = users_map.get(m.uploaded_by or "")
+        enriched.append(d)
+    return enriched
 
 
 @app.post("/api/models/upload")
@@ -359,7 +376,13 @@ async def get_my_models(
         .where(STLModel.uploaded_by == str(user.id))
         .order_by(STLModel.dateAdded.desc())
     )
-    return [model_to_dict(m) for m in result.scalars().all()]
+    models_list = result.scalars().all()
+    enriched = []
+    for m in models_list:
+        d = model_to_dict(m)
+        d["uploaded_by_email"] = user.email
+        enriched.append(d)
+    return enriched
 
 
 @app.patch("/api/models/{model_id}")
@@ -757,7 +780,18 @@ async def admin_deny_folder(
     return {"ok": True}
 
 
-# --- Printables import ---
+# --- Multi-site import ---
+
+def get_importer(url: str):
+    host = urlparse(url).hostname or ""
+    if "printables.com" in host:
+        return printables.PrintablesImporter()
+    if "thingiverse.com" in host:
+        return thingiverse.ThingiverseImporter()
+    if "makerworld.com" in host:
+        return makerworld.MakerWorldImporter()
+    return None
+
 
 @app.post("/api/printables/importid")
 async def import_model_by_id(
@@ -765,27 +799,54 @@ async def import_model_by_id(
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_verified_user),
 ):
-    importer = printables.PrintablesImporter()
     model_id = payload.get("id")
     model_name = payload.get("name")
     parent_id = payload.get("parentId")
     preview_path = payload.get("previewPath")
     folder_id = payload.get("folderId", "1")
     type_name = payload.get("typeName")
+    download_url = payload.get("downloadUrl")
 
     mid = str(uuid.uuid4())
-    ext = type_name if type_name is not None else ".stl"
+    ext = type_name if type_name is not None else "stl"
     dest = os.path.join(UPLOAD_DIR, f"{mid}.{ext}")
 
-    if model_id is None:
-        raise HTTPException(status_code=400, detail="id is required")
+    if download_url:
+        # Direct download path (Thingiverse, MakerWorld, etc.)
+        import requests as req
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            )
+        }
+        file_resp = req.get(download_url, headers=headers, allow_redirects=True, timeout=60)
+        if file_resp.status_code != 200:
+            raise HTTPException(status_code=500, detail="Failed to download file")
 
-    file, thumbnail = importer.importfromId(model_id, parent_id, preview_path)
-    if file is None:
-        raise HTTPException(status_code=500, detail="File is empty")
+        thumbnail = ""
+        if preview_path:
+            try:
+                img = req.get(preview_path, headers=headers, allow_redirects=True, timeout=15)
+                if img.status_code == 200:
+                    thumbnail = "data:image/jpeg;base64," + base64.b64encode(img.content).decode()
+            except Exception:
+                pass
+
+        file_content = file_resp.content
+    else:
+        # Printables GraphQL path
+        if model_id is None:
+            raise HTTPException(status_code=400, detail="id is required")
+        importer = printables.PrintablesImporter()
+        file_resp, thumbnail = importer.importfromId(model_id, parent_id, preview_path)
+        if file_resp is None:
+            raise HTTPException(status_code=500, detail="File is empty")
+        file_content = file_resp.content
 
     with open(dest, "wb") as fh:
-        fh.write(file.content)
+        fh.write(file_content)
     size = os.path.getsize(dest)
 
     m = STLModel(
@@ -796,7 +857,7 @@ async def import_model_by_id(
         size=size,
         dateAdded=now_ms(),
         tags=json.dumps(["imported"]),
-        description="Imported from Printables",
+        description="Imported from URL",
         thumbnail=thumbnail,
         uploaded_by=str(user.id),
         status="pending",
@@ -811,14 +872,20 @@ async def import_model_options(
     payload: dict,
     _user: User = Depends(current_active_verified_user),
 ):
-    importer = printables.PrintablesImporter()
     url = payload.get("url")
     if url is None:
         raise HTTPException(status_code=400, detail="url is required")
 
+    importer = get_importer(url)
+    if importer is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported site. Supported: Printables, Thingiverse, MakerWorld",
+        )
+
     model_data = importer.getModelOptions(url)
     if model_data is None:
-        raise HTTPException(status_code=500, detail="Collection is empty")
+        raise HTTPException(status_code=400, detail="Could not find 3D model files at this URL")
     return model_data
 
 

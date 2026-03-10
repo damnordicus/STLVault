@@ -396,6 +396,7 @@ const App = () => {
             model.previewPath,
             importFolderId,
             model.typeName,
+            model.downloadUrl,
           );
           await handleUpdateSTEPThumbnail(newModel);
           setUploadQueue((prev) => prev - 1);
@@ -1053,12 +1054,12 @@ const App = () => {
                           type="url"
                           required
                           className="w-full bg-vault-900 border border-vault-700 rounded-md px-3 py-2 text-white focus:border-indigo-500 outline-none placeholder:text-slate-600"
-                          placeholder="https://www.printables.com/model/..."
+                          placeholder="https://www.printables.com/model/... or Thingiverse, MakerWorld"
                           value={importUrl}
                           onChange={(e) => setImportUrl(e.target.value)}
                         />
                         <p className="text-xs text-slate-500 mt-1">
-                          Paste a link from Printables or similar sites
+                          Supported: Printables, Thingiverse, MakerWorld
                         </p>
                       </div>
 

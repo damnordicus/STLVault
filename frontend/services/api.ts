@@ -204,6 +204,7 @@ export const api = {
     previewPath: string,
     folderId: string,
     typeName: string,
+    downloadUrl?: string,
   ): Promise<STLModel> => {
     const res = await authFetch(`${API_BASE_URL}/printables/importid`, {
       method: "POST",
@@ -215,6 +216,7 @@ export const api = {
         previewPath,
         folderId,
         typeName,
+        ...(downloadUrl ? { downloadUrl } : {}),
       }),
     });
     if (!res.ok) throw new Error("Import failed");

@@ -289,9 +289,10 @@ class PrintablesImporter:
 
     def getModelOptions(self, url):
         self.session = requests.Session()
-        modelId = re.search(r"model/(\d+)", url)[1]
-        if modelId is None:
+        match = re.search(r"model/(\d+)", url)
+        if match is None:
             return None
+        modelId = match[1]
         try:
             self._set_client_data(url)
             time.sleep(0.2)

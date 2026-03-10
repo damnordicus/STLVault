@@ -43,6 +43,7 @@ export interface STLModelCollection {
   folder: string | null;
   previewPath: string;
   typeName: string;
+  downloadUrl?: string;
 }
 
 export interface StorageStats {

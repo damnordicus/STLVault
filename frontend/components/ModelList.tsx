@@ -95,6 +95,7 @@ const ModelList: React.FC<ModelListProps> = ({
   onMoveToFolder,
   onUploadToFolder,
 }) => {
+  console.log(models)
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -290,6 +291,7 @@ const ModelList: React.FC<ModelListProps> = ({
                 variant="contained"
                 startIcon={<Globe />}
                 onClick={onImport}
+                disabled
               >
                 Import URL
               </Button>
@@ -614,17 +616,16 @@ const ModelList: React.FC<ModelListProps> = ({
                           size="small"
                         />
                       </div>
-                      <CardContent>
-                        <Typography gutterBottom variant="body1" noWrap={true}>
+                      <CardContent sx={{ pb: 1 }}>
+                        <Typography variant="body1" noWrap sx={{ mb: 0.5 }}>
                           {model.name}
                         </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{ color: "text.secondary" }}
-                        >
-                          {(model.size / (1024 * 1024)).toFixed(2)}
-                          {" MB  • "}
+                        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                          {(model.size / (1024 * 1024)).toFixed(2)} MB &bull;{" "}
                           {new Date(model.dateAdded).toLocaleDateString()}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap>
+                          Uploaded by: {model.uploaded_by_email ?? model.uploaded_by}
                         </Typography>
                         {model.status === "pending" && (
                           <Chip
