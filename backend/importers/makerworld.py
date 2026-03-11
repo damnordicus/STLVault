@@ -1,6 +1,7 @@
 import base64
 import re
 import json
+from typing import Optional
 
 import requests
 
@@ -68,7 +69,7 @@ def _files_from_next_data(data: dict) -> list:
     return []
 
 
-def _build_file_entry(f: dict, model_id: str) -> dict | None:
+def _build_file_entry(f: dict, model_id: str) -> Optional[dict]:
     name = f.get("name", f.get("fileName", ""))
     ext = _ext(name)
     if ext not in ALLOWED_EXTENSIONS:
