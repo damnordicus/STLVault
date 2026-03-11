@@ -285,16 +285,16 @@ const ModelList: React.FC<ModelListProps> = ({
             </Stack>
           </div>
 
-          <div className="flex justify-around md:flex-wrap gap-3 ">
-            <Stack direction="row" spacing={2}>
-              <Button
+          <div className="flex justify-center md:flex-wrap gap-3">
+            <Stack direction="row"  spacing={2}>
+              {/* <Button
                 variant="contained"
                 startIcon={<Globe />}
                 onClick={onImport}
                 disabled
               >
                 Import URL
-              </Button>
+              </Button> */}
               <Button
                 component="label"
                 role={undefined}

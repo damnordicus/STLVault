@@ -240,7 +240,7 @@ const Dashboard: React.FC = () => {
         {!loading && !error && models.length > 0 && (
           <Grid container spacing={2}>
             {models.filter(item => item.status === filter).map((model) => (
-              <Grid key={model.id} size={{ xs: 6, sm: 4, md: 3, lg: 2 }}>
+              <Grid key={model.id} size={{ xs: 12, sm: 6, md: 4, lg: 4, xl: 4 }}>
                 <ModelCard model={model} />
               </Grid>
             ))}

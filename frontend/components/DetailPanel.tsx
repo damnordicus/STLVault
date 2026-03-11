@@ -28,6 +28,7 @@ import TextField from "@mui/material/TextField";
 import Badge from "@mui/material/Badge";
 import Chip from "@mui/material/Chip";
 import Grid from "@mui/material/Grid";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DetailPanelProps {
   model: STLModel | null;
@@ -44,6 +45,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
   onUpdate,
   onDelete,
 }) => {
+  const { user } = useAuth();
   const [isReplacing, setIsReplacing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -403,10 +405,12 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
                 </Stack>
               </div>
             </div>
-            <Divider />
+            {/* <Divider /> */}
 
             {/* File Replacement Section (Edit Mode Only) */}
-            {isEditing && (
+            {(isEditing && user.id === model.uploaded_by) && (
+              <>
+              
               <div className="pb-3 border-b border-vault-700 mb-3">
                 <Typography variant="h6" gutterBottom>
                   File editing:
@@ -479,6 +483,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
                   </Button>
                 </Stack>
               </div>
+              </>
             )}
 
             {isEditing && (
@@ -504,6 +509,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
             )}
           </div>
         </div>
+        <Divider />
 
         <Stack
           direction="column"
@@ -514,7 +520,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
             minWidth: 0,
           }}
         >
-          {!isEditing && (
+          {/* {(!isEditing && user.id === model.uploaded_by) && (
             <Button
               fullWidth
               onClick={() => setIsEditing(true)}
@@ -524,8 +530,8 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
               Edit
             </Button>
           )}
-          <Divider />
-          <Typography variant="h6" color="error" gutterBottom>
+          <Divider /> */}
+         {user.id === model.uploaded_by &&<> <Typography variant="h6" color="error" gutterBottom>
             Warning Zone
           </Typography>
 
@@ -538,6 +544,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
           >
             Delete Model
           </Button>
+          </>}
         </Stack>
 
         {/* Error Modal Overlay */}
