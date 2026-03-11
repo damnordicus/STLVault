@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
     base: "/",
     preview: {
       port: 5173,
-      allowedHosts: ["TERA_APP_URL"],
+      allowedHosts: [env.TERA_APP_URL?.replace(/^https?:\/\//, "")],
     },
     server: {
       port: 5173,
