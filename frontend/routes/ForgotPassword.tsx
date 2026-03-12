@@ -22,88 +22,79 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <>
-    <div
-      className="absolute inset-0 bg-cover bg-center bg-[url(stlvault-background.png)] blur-sm"
-    />
-    <div
-      className="absolute inset-0 bg-cover bg-center bg-black/60"
-    />
-    <div
-      className="absolute inset-0"
-      style={{ background: "radial-gradient(ellipse at center, transparent 10%, black 80%)" }}
-    />
-    <Box
-      className="relative z-10"
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Box
-        component={submitted ? "div" : "form"}
-        {...(!submitted && { onSubmit: handleSubmit })}
-        sx={{
-          width: "100%",
-          maxWidth: 400,
-          p: 4,
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          border: 1,
-          borderColor: "divider",
-          display: "flex",
-          flexDirection: "column",
-          gap: 2,
-        }}
-        >
-        <Typography variant="h5" fontWeight={700} textAlign="center">
-          Reset Password
-        </Typography>
+    <div className="flex min-h-screen">
+      {/* Left panel — form */}
+      <div className="flex flex-col justify-between items-center w-full md:w-[420px] lg:w-[480px] shrink-0 bg-vault-900 px-10 py-12 z-10">
+        <div className="flex-1 flex items-center justify-center w-full">
+          <Box
+            component={submitted ? "div" : "form"}
+            {...(!submitted && { onSubmit: handleSubmit })}
+            className="flex flex-col w-full max-w-[360px] gap-5"
+          >
+            <div className="mb-2">
+              <Typography variant="h4" fontWeight={700}>
+                Reset Password
+              </Typography>
+              {!submitted && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Enter your .mil email and we'll send you a reset link.
+                </Typography>
+              )}
+            </div>
 
-        {submitted ? (
-          <>
-            <Alert severity="info">
-              If an account exists for <strong>{email}</strong>, a reset link has been
-              sent to that address.
-            </Alert>
-            <Link to="/login" style={{ textDecoration: "none" }}>
-              <Button variant="outlined" fullWidth>
-                Back to Sign In
-              </Button>
-            </Link>
-          </>
-        ) : (
-          <>
-            <Typography variant="body2" color="text.secondary">
-              Enter your .mil email and we'll send you a reset link.
-            </Typography>
+            {submitted ? (
+              <>
+                <Alert severity="info">
+                  If an account exists for <strong>{email}</strong>, a reset link has been
+                  sent to that address.
+                </Alert>
+                <Link to="/login" style={{ textDecoration: "none" }}>
+                  <Button variant="outlined" fullWidth sx={{ mt: 1 }}>
+                    Back to Sign In
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <TextField
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  fullWidth
+                  autoFocus
+                />
 
-            <TextField
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              fullWidth
-              autoFocus
-              />
+                <Button type="submit" variant="contained" disabled={loading} fullWidth sx={{ mt: 1 }}>
+                  {loading ? <CircularProgress size={22} color="inherit" /> : "Send Reset Link"}
+                </Button>
 
-            <Button type="submit" variant="contained" disabled={loading} fullWidth>
-              {loading ? <CircularProgress size={22} color="inherit" /> : "Send Reset Link"}
-            </Button>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  <Link to="/login" style={{ color: "inherit" }}>
+                    Back to Sign In
+                  </Link>
+                </Typography>
+              </>
+            )}
+          </Box>
+        </div>
+        <div className="flex items-center gap-2 text-slate-500 text-xs">
+          <span>Powered by</span>
+          <img src="/assets/spark.png" alt="Spark" className="h-5 w-auto" />
+        </div>
+      </div>
 
-            <Typography variant="body2" textAlign="center">
-              <Link to="/login" style={{ color: "inherit" }}>
-                Back to Sign In
-              </Link>
-            </Typography>
-          </>
-        )}
-      </Box>
-    </Box>
-        </>
+      {/* Right panel — image */}
+      <div className="hidden md:block flex-1 relative overflow-hidden">
+        <img
+          src="stlvault-background.png"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-vault-900/80 via-transparent to-transparent" />
+      </div>
+    </div>
   );
 };
 
