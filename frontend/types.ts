@@ -34,6 +34,12 @@ export interface STLModel {
   denial_reason?: string | null;
   uploaded_by?: string | null;
   uploaded_by_email?: string | null;
+  pending_folder?: {
+    id: string;
+    name: string;
+    parentId: string | null;
+    parent_name?: string | null;
+  } | null;
 }
 
 export interface STLModelCollection {

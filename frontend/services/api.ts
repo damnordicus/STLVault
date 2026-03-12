@@ -276,9 +276,17 @@ export const api = {
   },
 
   // 18. ADMIN: approve a model
-  approveModel: async (id: string): Promise<STLModel> => {
+  approveModel: async (
+    id: string,
+    folderOverride?: { folderId?: string; folderName?: string },
+  ): Promise<STLModel> => {
     const res = await authFetch(`${API_BASE_URL}/admin/models/${id}/approve`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        folder_id: folderOverride?.folderId ?? null,
+        folder_name: folderOverride?.folderName ?? null,
+      }),
     });
     if (!res.ok) throw new Error("Approve failed");
     return res.json();

@@ -20,6 +20,7 @@ import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import { CheckCircle, XCircle, Box as BoxIcon, Clock, FolderOpen, RefreshCw, ArrowLeft } from "lucide-react";
+import FolderBreadcrumbPicker from "../components/FolderBreadcrumbPicker";
 
 type PendingFolder = Folder & { requested_by_email?: string; parent_name?: string | null };
 
@@ -65,6 +66,11 @@ const AdminDashboard: React.FC = () => {
   const [folderDenyReason, setFolderDenyReason] = useState("");
   const [folderActionLoading, setFolderActionLoading] = useState(false);
 
+  // Folder override state for models that include a new-folder request
+  const [availableFolders, setAvailableFolders] = useState<Folder[]>([]);
+  const [pendingFolderName, setPendingFolderName] = useState("");
+  const [overrideFolderId, setOverrideFolderId] = useState<string>("");
+
   const loadData = () => {
     setLoading(true);
     setFoldersLoading(true);
@@ -93,9 +99,22 @@ const AdminDashboard: React.FC = () => {
         setFolderError(e instanceof Error ? e.message : "Failed to load pending folders");
       })
       .finally(() => setFoldersLoading(false));
+
+    api.getFolders().then(setAvailableFolders).catch(() => {});
   };
 
   useEffect(() => { loadData(); }, []);
+
+  // Reset folder override state whenever selection changes
+  useEffect(() => {
+    if (selected?.pending_folder) {
+      setPendingFolderName(selected.pending_folder.name);
+      setOverrideFolderId("");
+    } else {
+      setPendingFolderName("");
+      setOverrideFolderId("");
+    }
+  }, [selected?.id]);
 
   const removeFromList = (id: string) => {
     setPending((prev) => prev.filter((m) => m.id !== id));
@@ -106,7 +125,16 @@ const AdminDashboard: React.FC = () => {
     if (!selected) return;
     setActionLoading(true);
     try {
-      await api.approveModel(selected.id);
+      const folderOverride = selected.pending_folder
+        ? overrideFolderId
+          ? { folderId: overrideFolderId }
+          : { folderName: pendingFolderName }
+        : undefined;
+      await api.approveModel(selected.id, folderOverride);
+      // The pending folder was handled server-side; remove it from local state too
+      if (selected.pending_folder) {
+        setPendingFolders((prev) => prev.filter((f) => f.id !== selected.pending_folder!.id));
+      }
       removeFromList(selected.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Approve failed");
@@ -270,6 +298,14 @@ const AdminDashboard: React.FC = () => {
                   <Typography variant="caption" color="text.secondary" display="block">
                     {formatDate(m.dateAdded)}
                   </Typography>
+                  {m.pending_folder && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.25 }}>
+                      <FolderOpen size={11} style={{ opacity: 0.6 }} />
+                      <Typography variant="caption" color="warning.main" noWrap>
+                        + new folder
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               </Box>
             ))}
@@ -424,6 +460,42 @@ const AdminDashboard: React.FC = () => {
           <Typography variant="body2" sx={{ mb: 1.5, whiteSpace: "pre-wrap", color: "text.secondary" }}>
             {selected.description}
           </Typography>
+        )}
+
+        {selected.pending_folder && (
+          <Box sx={{ mt: 1.5, mb: 1, p: 1.5, border: 1, borderColor: "divider", borderRadius: 1, bgcolor: "action.hover" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+              <FolderOpen size={16} style={{ opacity: 0.7 }} />
+              <Typography variant="body2" fontWeight={600}>New Folder Requested</Typography>
+            </Box>
+            {selected.pending_folder.parent_name && (
+              <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                Under: {selected.pending_folder.parent_name}
+              </Typography>
+            )}
+            <TextField
+              size="small"
+              label="Folder name"
+              value={pendingFolderName}
+              onChange={(e) => setPendingFolderName(e.target.value)}
+              fullWidth
+              disabled={!!overrideFolderId}
+              sx={{ mb: 1 }}
+            />
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+              Or place in existing folder:
+            </Typography>
+            <FolderBreadcrumbPicker
+              folders={availableFolders}
+              selectedFolderId={overrideFolderId || null}
+              onSelect={(id) => setOverrideFolderId(id ?? "")}
+            />
+            {overrideFolderId && (
+              <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 0.5 }}>
+                New folder request will be discarded — model placed in selected folder.
+              </Typography>
+            )}
+          </Box>
         )}
 
         <Box sx={{ display: "flex", gap: 1.5, mt: 1.5 }}>

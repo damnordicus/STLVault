@@ -211,6 +211,11 @@ class ApproveFolderPayload(BaseModel):
     name: Optional[str] = None
 
 
+class ApproveModelPayload(BaseModel):
+    folder_id: Optional[str] = None   # Move to this existing approved folder instead
+    folder_name: Optional[str] = None  # Rename the pending folder on approval
+
+
 # --- Folder endpoints ---
 
 @app.get("/api/folders")
@@ -621,6 +626,21 @@ async def admin_get_pending(
     for m in models_list:
         d = model_to_dict(m)
         d["uploaded_by_email"] = users_map.get(m.uploaded_by or "")
+        d["pending_folder"] = None
+        if m.folderId:
+            pf_result = await session.execute(
+                select(Folder).where(Folder.id == m.folderId, Folder.status == "pending")
+            )
+            pf = pf_result.scalar_one_or_none()
+            if pf:
+                pf_dict = folder_to_dict(pf)
+                if pf.parentId:
+                    parent_result = await session.execute(select(Folder).where(Folder.id == pf.parentId))
+                    parent = parent_result.scalar_one_or_none()
+                    pf_dict["parent_name"] = parent.name if parent else None
+                else:
+                    pf_dict["parent_name"] = None
+                d["pending_folder"] = pf_dict
         enriched.append(d)
     return enriched
 
@@ -628,6 +648,7 @@ async def admin_get_pending(
 @app.post("/api/admin/models/{model_id}/approve")
 async def admin_approve_model(
     model_id: str,
+    payload: ApproveModelPayload,
     session: AsyncSession = Depends(get_async_session),
     _user: User = Depends(current_admin_user),
 ):
@@ -635,8 +656,30 @@ async def admin_approve_model(
     m = result.scalar_one_or_none()
     if not m:
         raise HTTPException(status_code=404, detail="Model not found")
+
+    model_values: dict = {"status": "approved"}
+
+    if m.folderId:
+        pf_result = await session.execute(
+            select(Folder).where(Folder.id == m.folderId, Folder.status == "pending")
+        )
+        pending_folder = pf_result.scalar_one_or_none()
+        if pending_folder:
+            if payload.folder_id:
+                # Admin chose an existing folder — move model there, discard pending folder
+                model_values["folderId"] = payload.folder_id
+                await session.execute(delete(Folder).where(Folder.id == pending_folder.id))
+            else:
+                # Approve the pending folder, optionally with a new name
+                folder_values: dict = {"status": "approved"}
+                if payload.folder_name and payload.folder_name.strip():
+                    folder_values["name"] = payload.folder_name.strip()
+                await session.execute(
+                    update(Folder).where(Folder.id == pending_folder.id).values(**folder_values)
+                )
+
     await session.execute(
-        update(STLModel).where(STLModel.id == model_id).values(status="approved")
+        update(STLModel).where(STLModel.id == model_id).values(**model_values)
     )
     await session.commit()
     result = await session.execute(select(STLModel).where(STLModel.id == model_id))
@@ -699,6 +742,15 @@ async def admin_get_pending_folders(
         select(Folder).where(Folder.status == "pending").order_by(Folder.id)
     )
     folders_list = result.scalars().all()
+
+    # Exclude pending folders that already appear alongside a pending model upload
+    pending_model_folders_result = await session.execute(
+        select(STLModel.folderId)
+        .where(STLModel.status == "pending")
+        .where(STLModel.folderId.isnot(None))
+    )
+    folders_with_pending_models = {row[0] for row in pending_model_folders_result}
+    folders_list = [f for f in folders_list if f.id not in folders_with_pending_models]
 
     users_result = await session.execute(select(User))
     users_map = {str(u.id): u.email for u in users_result.scalars().all()}
