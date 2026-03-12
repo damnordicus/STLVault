@@ -13,7 +13,7 @@ const MIN_PASSWORD_LENGTH = 8;
 const PoweredBy = () => (
   <div className="flex items-center gap-2 text-slate-500 text-xs">
     <span>Powered by</span>
-    <img src="/assets/spark.png" alt="Spark" className="h-5 w-auto" />
+    <img src="/spark.png" alt="Spark" className="h-5 w-auto" />
   </div>
 );
 
