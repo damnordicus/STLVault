@@ -33,7 +33,6 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -61,43 +60,13 @@ const Register: React.FC = () => {
     setLoading(true);
     try {
       await authApi.register(email, password);
-      setSuccess(true);
+      navigate(`/verify?email=${encodeURIComponent(email)}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <div className="flex min-h-screen">
-        <div className="flex flex-col justify-between items-center w-full md:w-[420px] lg:w-[480px] shrink-0 bg-vault-900 px-10 py-12 z-10">
-          <div className="flex-1 flex items-center justify-center w-full">
-            <Box className="flex flex-col w-full max-w-[360px] gap-5">
-              <div className="mb-2">
-                <Typography variant="h5" fontWeight={700}>
-                  Check Your Inbox
-                </Typography>
-              </div>
-              <Alert severity="success">
-                A verification link has been sent to <strong>{email}</strong>.
-                You must verify your email before signing in.
-              </Alert>
-              <Typography variant="body2" color="text.secondary">
-                Click the link in the email to activate your account.
-              </Typography>
-              <Button variant="outlined" onClick={() => navigate("/login")} fullWidth sx={{ mt: 1 }}>
-                Back to Sign In
-              </Button>
-            </Box>
-          </div>
-          <PoweredBy />
-        </div>
-        <ImagePanel />
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen">

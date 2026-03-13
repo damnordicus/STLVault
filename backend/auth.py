@@ -1,4 +1,6 @@
 import os
+import random
+import time
 import uuid
 from email.message import EmailMessage
 from typing import Optional
@@ -12,6 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_async_session
 from models import User
+
+# email -> (code, jwt_token, expires_at)
+_pending_verifications: dict[str, tuple[str, str, float]] = {}
+VERIFY_CODE_TTL = 24 * 3600  # 24 hours, matches FastAPI-Users token lifetime
 
 JWT_SECRET = os.getenv("JWT_SECRET", "INSECURE_CHANGE_IN_PRODUCTION")
 # 8-hour tokens — one working day
@@ -68,15 +74,17 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     async def on_after_request_verify(
         self, user: User, token: str, request: Optional[Request] = None
     ):
-        verify_url = f"{APP_URL}/verify?token={token}"
+        code = f"{random.randint(0, 999999):06d}"
+        _pending_verifications[user.email.lower()] = (code, token, time.time() + VERIFY_CODE_TTL)
         body = (
-            f"Welcome to STLVault,\n\n"
-            f"Please verify your .mil email address by visiting:\n\n"
-            f"  {verify_url}\n\n"
-            f"This link expires in 24 hours.\n\n"
-            f"If you did not register for STLVault, please disregard this message."
+            f"Welcome to Mission Fabrication Resource!,\n\n"
+            f"Your email verification code is:\n\n"
+            f"  {code}\n\n"
+            f"Enter this code in the M.F.R. app to activate your account.\n"
+            f"This code expires in 24 hours.\n\n"
+            f"If you did not register for M.F.R., please disregard this message."
         )
-        await _send_email(user.email, "STLVault — Verify Your Email", body)
+        await _send_email(user.email, "Mission Fabricaiton Resource (M.F.R.) — Verify Your Email", body)
 
     async def on_after_verify(self, user: User, request: Optional[Request] = None):
         print(f"[AUTH] User verified: {user.email}")
@@ -86,13 +94,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     ):
         reset_url = f"{APP_URL}/reset-password?token={token}"
         body = (
-            f"A password reset was requested for your STLVault account.\n\n"
+            f"A password reset was requested for your Mission Fabrication Resource account.\n\n"
             f"Reset your password here:\n\n"
             f"  {reset_url}\n\n"
             f"This link expires in 1 hour.\n\n"
             f"If you did not request this, please disregard this message."
         )
-        await _send_email(user.email, "STLVault — Password Reset", body)
+        await _send_email(user.email, "Mission Fabrication Resource (M.F.R.) — Password Reset", body)
 
 
 async def get_user_manager(user_db=Depends(get_user_db)):

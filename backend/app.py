@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.cors import CORSMiddleware
 
 from auth import (
+    _pending_verifications,
     _send_email,
     auth_backend,
     current_active_verified_user,
@@ -77,6 +78,44 @@ app.include_router(
     prefix="/api/users",
     tags=["users"],
 )
+
+
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+
+
+@app.post("/api/auth/verify-code", tags=["auth"])
+async def verify_email_code(
+    body: VerifyCodeRequest,
+    user_manager=Depends(get_user_manager),
+):
+    from fastapi_users.exceptions import InvalidVerifyToken, UserAlreadyVerified
+
+    email = body.email.lower().strip()
+    entry = _pending_verifications.get(email)
+
+    if not entry:
+        raise HTTPException(status_code=400, detail="VERIFY_CODE_INVALID")
+
+    code, token, expires_at = entry
+
+    if time.time() > expires_at:
+        _pending_verifications.pop(email, None)
+        raise HTTPException(status_code=400, detail="VERIFY_CODE_EXPIRED")
+
+    if body.code != code:
+        raise HTTPException(status_code=400, detail="VERIFY_CODE_INVALID")
+
+    try:
+        await user_manager.verify(token, None)
+    except UserAlreadyVerified:
+        pass  # treat as success
+    except (InvalidVerifyToken, Exception):
+        raise HTTPException(status_code=400, detail="VERIFY_CODE_INVALID")
+
+    _pending_verifications.pop(email, None)
+    return {"message": "Email verified successfully"}
 
 
 @app.on_event("startup")

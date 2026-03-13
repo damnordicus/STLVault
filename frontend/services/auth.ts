@@ -33,7 +33,7 @@ export const authApi = {
       const detail: string = data.detail ?? "Login failed";
       if (detail === "LOGIN_USER_NOT_VERIFIED") {
         throw new Error(
-          "Your email has not been verified. Please check your .mil inbox."
+          "Your email has not been verified. Please enter the 6-digit code sent to your .mil inbox."
         );
       }
       if (detail === "LOGIN_BAD_CREDENTIALS") {
@@ -70,21 +70,21 @@ export const authApi = {
     return res.json();
   },
 
-  verifyEmail: async (token: string): Promise<void> => {
-    const res = await fetch(`${AUTH_URL}/api/auth/verify`, {
+  verifyEmailCode: async (email: string, code: string): Promise<void> => {
+    const res = await fetch(`${AUTH_URL}/api/auth/verify-code`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ email, code }),
     });
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       const detail: string = data.detail ?? "Verification failed";
-      if (detail === "VERIFY_USER_ALREADY_VERIFIED") {
-        return; // treat as success
+      if (detail === "VERIFY_CODE_EXPIRED") {
+        throw new Error("This verification code has expired. Please register again.");
       }
-      if (detail === "VERIFY_TOKEN_INVALID" || detail === "VERIFY_TOKEN_EXPIRED") {
-        throw new Error("This verification link is invalid or has expired.");
+      if (detail === "VERIFY_CODE_INVALID") {
+        throw new Error("Invalid verification code. Please check your email and try again.");
       }
       throw new Error(detail);
     }
