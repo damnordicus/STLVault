@@ -57,7 +57,6 @@ const Login: React.FC = () => {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            inputProps={{ pattern: ".*\\.mil$" }}
             helperText=".mil addresses only"
             required
             fullWidth
