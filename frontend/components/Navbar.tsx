@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, LogOut, X } from 'lucide-react';
+import { Menu, LogOut, X, House } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_NAME, NAV_OPTIONS } from '@/contexts/constants';
@@ -92,13 +92,12 @@ const Navbar: React.FC<NavbarProps> = ({
 						className="w-10 h-10 rounded-lg bg-vault-800 hover:bg-vault-700 border border-vault-700 flex items-center justify-center text-slate-200"
 						aria-label="Open sidebar"
 					>
-						<Menu className="w-5 h-5" />
+						<House className="w-5 h-5" />
 					</button>
 				)}
 
 				<div className="min-w-0 flex-1">
 					<div className="text-base font-bold text-white truncate tracking-wide">{title}</div>
-					{subtitle && <div className="text-xs text-slate-400 truncate">{subtitle}</div>}
 				</div>
 
 				{/* Desktop nav buttons — hidden on mobile */}

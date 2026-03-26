@@ -944,6 +944,23 @@ async def admin_patch_user(
     }
 
 
+@app.delete("/api/admin/users/{user_id}")
+async def admin_delete_user(
+    user_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_admin_user),
+):
+    result = await session.execute(select(User).where(User.id == user_id))
+    u = result.scalar_one_or_none()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    if str(u.id) == str(current_user.id):
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    await session.execute(delete(User).where(User.id == user_id))
+    await session.commit()
+    return {"ok": True}
+
+
 if __name__ == "__main__":
     import uvicorn
 

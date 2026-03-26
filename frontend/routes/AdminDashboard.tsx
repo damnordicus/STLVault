@@ -23,7 +23,7 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
-import { CheckCircle, XCircle, Box as BoxIcon, Clock, FolderOpen, RefreshCw, ArrowLeft, Users } from "lucide-react";
+import { CheckCircle, XCircle, Box as BoxIcon, Clock, FolderOpen, RefreshCw, ArrowLeft, Users, ChevronDown, Trash2 } from "lucide-react";
 import FolderBreadcrumbPicker from "../components/FolderBreadcrumbPicker";
 import {
   useReactTable,
@@ -34,6 +34,7 @@ import {
   createColumnHelper,
   type SortingState,
 } from "@tanstack/react-table";
+import { useAuth } from "@/contexts/AuthContext";
 
 type PendingFolder = Folder & { requested_by_email?: string; parent_name?: string | null };
 
@@ -63,6 +64,7 @@ const formatDate = (ms: number): string =>
   });
 
 const AdminDashboard: React.FC = () => {
+  const {user} = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -94,6 +96,9 @@ const AdminDashboard: React.FC = () => {
   const [usersError, setUsersError] = useState("");
   const [userFilter, setUserFilter] = useState("");
   const [userSorting, setUserSorting] = useState<SortingState>([]);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<AdminUser | null>(null);
+  const [deleteUserLoading, setDeleteUserLoading] = useState(false);
 
   // User edit modal
   type UserEditField = "is_active" | "is_verified" | "is_superuser";
@@ -265,6 +270,20 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!deleteUserTarget) return;
+    setDeleteUserLoading(true);
+    try {
+      await api.deleteAdminUser(deleteUserTarget.id);
+      setUsers((prev) => prev.filter((u) => u.id !== deleteUserTarget.id));
+      setDeleteUserTarget(null);
+    } catch (e) {
+      setUsersError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleteUserLoading(false);
+    }
+  };
+
   // --- Users TanStack table ---
   const userColumnHelper = createColumnHelper<AdminUser>();
   const userColumns = useMemo(() => [
@@ -316,9 +335,53 @@ const AdminDashboard: React.FC = () => {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  // On mobile: show detail panel when something is selected
+  // On mobile: hide list when detail is open OR when on users tab (users panel is full-width)
   const showDetail = !!selected;
-  const showList = !isMobile || !showDetail;
+  const showList = !isMobile || (!showDetail && tab !== "users");
+
+  // --- Shared tab bar (used in listPanel on desktop; reused at top of usersPanel on mobile) ---
+  const tabBar = (
+    <Box sx={{ display: "flex", alignItems: "center", borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
+      <Tabs
+        value={tab}
+        onChange={(_e, v) => setTab(v)}
+        variant="fullWidth"
+        sx={{ flex: 1 }}
+      >
+        <Tab
+          label={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              Models
+              {pending.length > 0 && (
+                <Chip label={pending.length} size="small" color="warning" />
+              )}
+            </Box>
+          }
+          value="models"
+        />
+        <Tab
+          label={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              Folders
+              {pendingFolders.length > 0 && (
+                <Chip label={pendingFolders.length} size="small" color="warning" />
+              )}
+            </Box>
+          }
+          value="folders"
+        />
+        <Tab label="Users" value="users" />
+      </Tabs>
+      <IconButton
+        onClick={() => { loadData(); if (tab === "users") loadUsers(); }}
+        size="small"
+        sx={{ mx: 0.5 }}
+        title="Refresh"
+      >
+        <RefreshCw size={16} />
+      </IconButton>
+    </Box>
+  );
 
   // --- List panel ---
   const listPanel = (
@@ -333,46 +396,7 @@ const AdminDashboard: React.FC = () => {
         height: "100%",
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
-        <Tabs
-          value={tab}
-          onChange={(_e, v) => setTab(v)}
-          variant="fullWidth"
-          sx={{ flex: 1 }}
-        >
-          <Tab
-            label={
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                Models
-                {pending.length > 0 && (
-                  <Chip label={pending.length} size="small" color="warning" />
-                )}
-              </Box>
-            }
-            value="models"
-          />
-          <Tab
-            label={
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                Folders
-                {pendingFolders.length > 0 && (
-                  <Chip label={pendingFolders.length} size="small" color="warning" />
-                )}
-              </Box>
-            }
-            value="folders"
-          />
-          <Tab label="Users" value="users" />
-        </Tabs>
-        <IconButton
-          onClick={() => { loadData(); if (tab === "users") loadUsers(); }}
-          size="small"
-          sx={{ mx: 0.5 }}
-          title="Refresh"
-        >
-          <RefreshCw size={16} />
-        </IconButton>
-      </Box>
+      {tabBar}
 
       <Box sx={{ flex: 1, overflowY: "auto" }}>
         {/* Models tab */}
@@ -539,6 +563,9 @@ const AdminDashboard: React.FC = () => {
   // --- Users panel (shown in detail area when users tab is active) ---
   const usersPanel = (
     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", height: "100%" }}>
+      {/* On mobile the listPanel is hidden when users tab is active, so render the tab bar here */}
+      {isMobile && tabBar}
+      <Typography sx={{textAlign: "center", fontSize:20, fontWeight: "bold", pt:1}}>Manage Users</Typography>
       <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
         <TextField
           size="small"
@@ -559,57 +586,107 @@ const AdminDashboard: React.FC = () => {
         )}
         {!usersLoading && !usersError && (
           <>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                {userTable.getHeaderGroups().map((hg) => (
-                  <tr key={hg.id}>
-                    {hg.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        onClick={header.column.getToggleSortingHandler()}
-                        style={{
-                          textAlign: "left",
-                          padding: "8px 12px",
-                          borderBottom: "1px solid rgba(255,255,255,0.1)",
-                          cursor: header.column.getCanSort() ? "pointer" : "default",
-                          whiteSpace: "nowrap",
-                          color: "rgba(255,255,255,0.6)",
-                          fontWeight: 600,
-                          userSelect: "none",
-                        }}
+            {isMobile ? (
+              /* Mobile: expandable cards */
+              usersFiltered.length === 0 ? (
+                <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, py: 5, color: "text.disabled" }}>
+                  <Users size={32} style={{ opacity: 0.3 }} />
+                  <Typography variant="body2">No users found</Typography>
+                </Box>
+              ) : (
+                usersFiltered.map((u) => {
+                  const isExpanded = expandedUserId === u.id;
+                  return (
+                    <Box key={u.id} sx={{ borderBottom: 1, borderColor: "divider" }}>
+                      <Box
+                        onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
+                        sx={{ display: "flex", alignItems: "center", px: 2, py: 1.5, cursor: "pointer", "&:hover": { bgcolor: "action.hover" }, borderTop:1, borderLeft:1, borderRight:1 ,borderRadius:1, borderColor: "rgba(255, 255, 255, 0.2)" }}
                       >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {header.column.getIsSorted() === "asc" ? " ↑" : header.column.getIsSorted() === "desc" ? " ↓" : ""}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {userTable.getRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={userColumns.length} style={{ padding: "40px 12px", textAlign: "center", color: "rgba(255,255,255,0.3)" }}>
-                      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                        <Users size={32} style={{ opacity: 0.3 }} />
-                        <span>No users found</span>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="body2" fontWeight={600} noWrap>{u.email}</Typography>
+                          {u.display_name && (
+                            <Typography variant="caption" color="text.secondary" noWrap display="block">{u.display_name}</Typography>
+                          )}
+                        </Box>
+                        <ChevronDown size={16} style={{ opacity: 0.5, flexShrink: 0, transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
                       </Box>
-                    </td>
-                  </tr>
-                ) : (
-                  userTable.getRowModel().rows.map((row) => (
-                    <tr key={row.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} style={{ padding: "8px 12px", verticalAlign: "middle" }}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
+                      {isExpanded && (
+                        <Box sx={{ px: 2, py: 1.5, bgcolor: "action.hover", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                          <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                            {u.is_active
+                              ? <div className="rounded-xl w-fit px-2 py-0.5 border border-green-500 bg-green-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(u, "is_active")}>Active</div>
+                              : <div className="rounded-xl w-fit px-2 py-0.5 border border-amber-500 bg-amber-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(u, "is_active")}>Inactive</div>}
+                            {u.is_verified
+                              ? <div className="rounded-xl w-fit px-2 py-0.5 border border-sky-500 bg-sky-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(u, "is_verified")}>Verified</div>
+                              : <div className="rounded-xl w-fit px-2 py-0.5 border border-slate-500 bg-slate-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(u, "is_verified")}>Unverified</div>}
+                            {u.is_superuser
+                              ? <div className="rounded-xl w-fit px-2 py-0.5 border border-red-500 bg-red-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(u, "is_superuser")}>Admin</div>
+                              : <div className="rounded-xl w-fit px-2 py-0.5 border border-slate-500 bg-slate-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(u, "is_superuser")}>User</div>}
+                          </Box>
+                          {/* Show delete button for anyone who isn't the current user */}
+                          {user.id !== u.id && <IconButton size="small" onClick={() => setDeleteUserTarget(u)} sx={{ color: "error.main", flexShrink: 0 }}>
+                            <Trash2 size={16} />
+                          </IconButton>}
+                        </Box>
+                      )}
+                    </Box>
+                  );
+                })
+              )
+            ) : (
+              /* Desktop: full table */
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  {userTable.getHeaderGroups().map((hg) => (
+                    <tr key={hg.id}>
+                      {hg.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          onClick={header.column.getToggleSortingHandler()}
+                          style={{
+                            textAlign: "left",
+                            padding: "8px 12px",
+                            borderBottom: "1px solid rgba(255,255,255,0.1)",
+                            cursor: header.column.getCanSort() ? "pointer" : "default",
+                            whiteSpace: "nowrap",
+                            color: "rgba(255,255,255,0.6)",
+                            fontWeight: 600,
+                            userSelect: "none",
+                          }}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getIsSorted() === "asc" ? " ↑" : header.column.getIsSorted() === "desc" ? " ↓" : ""}
+                        </th>
                       ))}
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </thead>
+                <tbody>
+                  {userTable.getRowModel().rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={userColumns.length} style={{ padding: "40px 12px", textAlign: "center", color: "rgba(255,255,255,0.3)" }}>
+                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                          <Users size={32} style={{ opacity: 0.3 }} />
+                          <span>No users found</span>
+                        </Box>
+                      </td>
+                    </tr>
+                  ) : (
+                    userTable.getRowModel().rows.map((row) => (
+                      <tr key={row.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} style={{ padding: "8px 12px", verticalAlign: "middle" }}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
             <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 1, textAlign: "right" }}>
-              {userTable.getRowModel().rows.length} of {users.length} users
+              {usersFiltered.length} of {users.length} users
             </Typography>
           </>
         )}
@@ -828,6 +905,25 @@ const AdminDashboard: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Delete user dialog */}
+      <Dialog open={!!deleteUserTarget} onClose={() => setDeleteUserTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete User</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={1}>
+            Permanently delete this account? This cannot be undone.
+          </Typography>
+          <Typography variant="body2" fontWeight={600} noWrap>
+            {deleteUserTarget?.email}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteUserTarget(null)}>Cancel</Button>
+          <Button onClick={handleDeleteUser} color="error" variant="contained" disabled={deleteUserLoading}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* User edit modal */}
       <Dialog open={!!userEditTarget} onClose={closeUserEdit} maxWidth="xs" fullWidth>
         <DialogTitle>

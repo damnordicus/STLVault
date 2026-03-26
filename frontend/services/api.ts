@@ -341,6 +341,14 @@ export const api = {
     return res.json();
   },
 
+  // 25. ADMIN: delete a user
+  deleteAdminUser: async (id: string): Promise<void> => {
+    const res = await authFetch(`${API_BASE_URL}/admin/users/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Failed to delete user");
+  },
+
   // 19. ADMIN: deny a model
   denyModel: async (id: string, reason: string): Promise<STLModel> => {
     const res = await authFetch(`${API_BASE_URL}/admin/models/${id}/deny`, {
