@@ -891,6 +891,59 @@ async def admin_deny_folder(
 
 
 
+@app.get("/api/admin/users")
+async def admin_list_users(
+    session: AsyncSession = Depends(get_async_session),
+    _user: User = Depends(current_admin_user),
+):
+    result = await session.execute(select(User).order_by(User.email))
+    users = result.scalars().all()
+    return [
+        {
+            "id": str(u.id),
+            "email": u.email,
+            "display_name": u.display_name,
+            "is_active": u.is_active,
+            "is_verified": u.is_verified,
+            "is_superuser": u.is_superuser,
+        }
+        for u in users
+    ]
+
+
+class AdminUserPatch(BaseModel):
+    is_active: Optional[bool] = None
+    is_verified: Optional[bool] = None
+    is_superuser: Optional[bool] = None
+
+
+@app.patch("/api/admin/users/{user_id}")
+async def admin_patch_user(
+    user_id: str,
+    payload: AdminUserPatch,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_admin_user),
+):
+    result = await session.execute(select(User).where(User.id == user_id))
+    u = result.scalar_one_or_none()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    updates = payload.model_dump(exclude_none=True)
+    if updates:
+        await session.execute(update(User).where(User.id == user_id).values(**updates))
+        await session.commit()
+        result = await session.execute(select(User).where(User.id == user_id))
+        u = result.scalar_one()
+    return {
+        "id": str(u.id),
+        "email": u.email,
+        "display_name": u.display_name,
+        "is_active": u.is_active,
+        "is_verified": u.is_verified,
+        "is_superuser": u.is_superuser,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
 

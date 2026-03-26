@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import { api } from "../services/api";
 import { Folder, STLModel } from "../types";
@@ -17,12 +17,34 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
-import { CheckCircle, XCircle, Box as BoxIcon, Clock, FolderOpen, RefreshCw, ArrowLeft } from "lucide-react";
+import { CheckCircle, XCircle, Box as BoxIcon, Clock, FolderOpen, RefreshCw, ArrowLeft, Users } from "lucide-react";
 import FolderBreadcrumbPicker from "../components/FolderBreadcrumbPicker";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  createColumnHelper,
+  type SortingState,
+} from "@tanstack/react-table";
 
 type PendingFolder = Folder & { requested_by_email?: string; parent_name?: string | null };
+
+type AdminUser = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  is_active: boolean;
+  is_verified: boolean;
+  is_superuser: boolean;
+};
 
 const formatSize = (bytes: number): string => {
   if (!bytes) return "—";
@@ -44,7 +66,7 @@ const AdminDashboard: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const [tab, setTab] = useState<"models" | "folders">("models");
+  const [tab, setTab] = useState<"models" | "folders" | "users">("models");
 
   // Pending models state
   const [pending, setPending] = useState<STLModel[]>([]);
@@ -65,6 +87,46 @@ const AdminDashboard: React.FC = () => {
   const [folderDenyTarget, setFolderDenyTarget] = useState<PendingFolder | null>(null);
   const [folderDenyReason, setFolderDenyReason] = useState("");
   const [folderActionLoading, setFolderActionLoading] = useState(false);
+
+  // Users state
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState("");
+  const [userFilter, setUserFilter] = useState("");
+  const [userSorting, setUserSorting] = useState<SortingState>([]);
+
+  // User edit modal
+  type UserEditField = "is_active" | "is_verified" | "is_superuser";
+  const [userEditTarget, setUserEditTarget] = useState<AdminUser | null>(null);
+  const [userEditField, setUserEditField] = useState<UserEditField | null>(null);
+  const [userEditValue, setUserEditValue] = useState<boolean>(false);
+  const [userEditLoading, setUserEditLoading] = useState(false);
+
+  const openUserEdit = (user: AdminUser, field: UserEditField) => {
+    setUserEditTarget(user);
+    setUserEditField(field);
+    setUserEditValue(user[field]);
+    setUserEditLoading(false);
+  };
+
+  const closeUserEdit = () => {
+    setUserEditTarget(null);
+    setUserEditField(null);
+  };
+
+  const handleUserEditSave = async () => {
+    if (!userEditTarget || !userEditField) return;
+    setUserEditLoading(true);
+    try {
+      const updated = await api.patchAdminUser(userEditTarget.id, { [userEditField]: userEditValue });
+      setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
+      closeUserEdit();
+    } catch (e) {
+      setUsersError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setUserEditLoading(false);
+    }
+  };
 
   // Folder override state for models that include a new-folder request
   const [availableFolders, setAvailableFolders] = useState<Folder[]>([]);
@@ -103,7 +165,23 @@ const AdminDashboard: React.FC = () => {
     api.getFolders().then(setAvailableFolders).catch(() => {});
   };
 
+  const loadUsers = () => {
+    setUsersLoading(true);
+    setUsersError("");
+    api
+      .getAdminUsers()
+      .then(setUsers)
+      .catch((e: unknown) => setUsersError(e instanceof Error ? e.message : "Failed to load users"))
+      .finally(() => setUsersLoading(false));
+  };
+
   useEffect(() => { loadData(); }, []);
+
+  useEffect(() => {
+    if (tab === "users" && users.length === 0 && !usersLoading) {
+      loadUsers();
+    }
+  }, [tab]);
 
   // Reset folder override state whenever selection changes
   useEffect(() => {
@@ -187,6 +265,57 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // --- Users TanStack table ---
+  const userColumnHelper = createColumnHelper<AdminUser>();
+  const userColumns = useMemo(() => [
+    userColumnHelper.accessor("email", {
+      header: "Email",
+      cell: (info) => info.getValue(),
+    }),
+    userColumnHelper.accessor("display_name", {
+      header: "Display Name",
+      cell: (info) => info.getValue() ?? <Typography variant="caption" color="text.disabled">—</Typography>,
+    }),
+    userColumnHelper.accessor("is_active", {
+      header: "Active",
+      cell: (info) => info.getValue()
+        ? <div className="rounded-xl w-fit px-2 py-0.5 border border-green-500 bg-green-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(info.row.original, "is_active")}>Active</div>
+        : <div className="rounded-xl w-fit px-2 py-0.5 border border-amber-500 bg-amber-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(info.row.original, "is_active")}>Inactive</div>,
+    }),
+    userColumnHelper.accessor("is_verified", {
+      header: "Verified",
+      cell: (info) => info.getValue()
+        ? <div className="rounded-xl w-fit px-2 py-0.5 border border-sky-500 bg-sky-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(info.row.original, "is_verified")}>Verified</div>
+        : <div className="rounded-xl w-fit px-2 py-0.5 border border-slate-500 bg-slate-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(info.row.original, "is_verified")}>Unverified</div>,
+    }),
+    userColumnHelper.accessor("is_superuser", {
+      header: "Role",
+      cell: (info) => info.getValue()
+        ? <div className="rounded-xl w-fit px-2 py-0.5 border border-red-500 bg-red-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(info.row.original, "is_superuser")}>Admin</div>
+        : <div className="rounded-xl w-fit px-2 py-0.5 border border-slate-500 bg-slate-600/30 cursor-pointer hover:opacity-70" onClick={() => openUserEdit(info.row.original, "is_superuser")}>User</div>,
+    })
+  ], [openUserEdit]);
+
+  const usersFiltered = useMemo(() => {
+    if (!userFilter) return users;
+    const q = userFilter.toLowerCase();
+    return users.filter(
+      (u) =>
+        u.email.toLowerCase().includes(q) ||
+        (u.display_name ?? "").toLowerCase().includes(q)
+    );
+  }, [users, userFilter]);
+
+  const userTable = useReactTable({
+    data: usersFiltered,
+    columns: userColumns,
+    state: { sorting: userSorting },
+    onSortingChange: setUserSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
   // On mobile: show detail panel when something is selected
   const showDetail = !!selected;
   const showList = !isMobile || !showDetail;
@@ -233,8 +362,14 @@ const AdminDashboard: React.FC = () => {
             }
             value="folders"
           />
+          <Tab label="Users" value="users" />
         </Tabs>
-        <IconButton onClick={loadData} size="small" sx={{ mx: 0.5 }} title="Refresh">
+        <IconButton
+          onClick={() => { loadData(); if (tab === "users") loadUsers(); }}
+          size="small"
+          sx={{ mx: 0.5 }}
+          title="Refresh"
+        >
           <RefreshCw size={16} />
         </IconButton>
       </Box>
@@ -401,6 +536,87 @@ const AdminDashboard: React.FC = () => {
     </Box>
   );
 
+  // --- Users panel (shown in detail area when users tab is active) ---
+  const usersPanel = (
+    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", height: "100%" }}>
+      <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
+        <TextField
+          size="small"
+          placeholder="Filter by email or name…"
+          value={userFilter}
+          onChange={(e) => setUserFilter(e.target.value)}
+          fullWidth
+        />
+      </Box>
+      <Box sx={{ flex: 1, overflow: "auto", p: 2 }}>
+        {usersLoading && (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+            <CircularProgress size={24} />
+          </Box>
+        )}
+        {!usersLoading && usersError && (
+          <Typography color="error">{usersError}</Typography>
+        )}
+        {!usersLoading && !usersError && (
+          <>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                {userTable.getHeaderGroups().map((hg) => (
+                  <tr key={hg.id}>
+                    {hg.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        onClick={header.column.getToggleSortingHandler()}
+                        style={{
+                          textAlign: "left",
+                          padding: "8px 12px",
+                          borderBottom: "1px solid rgba(255,255,255,0.1)",
+                          cursor: header.column.getCanSort() ? "pointer" : "default",
+                          whiteSpace: "nowrap",
+                          color: "rgba(255,255,255,0.6)",
+                          fontWeight: 600,
+                          userSelect: "none",
+                        }}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.column.getIsSorted() === "asc" ? " ↑" : header.column.getIsSorted() === "desc" ? " ↓" : ""}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody>
+                {userTable.getRowModel().rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={userColumns.length} style={{ padding: "40px 12px", textAlign: "center", color: "rgba(255,255,255,0.3)" }}>
+                      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                        <Users size={32} style={{ opacity: 0.3 }} />
+                        <span>No users found</span>
+                      </Box>
+                    </td>
+                  </tr>
+                ) : (
+                  userTable.getRowModel().rows.map((row) => (
+                    <tr key={row.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} style={{ padding: "8px 12px", verticalAlign: "middle" }}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+            <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 1, textAlign: "right" }}>
+              {userTable.getRowModel().rows.length} of {users.length} users
+            </Typography>
+          </>
+        )}
+      </Box>
+    </Box>
+  );
+
   // --- Detail panel ---
   const detailPanel = selected ? (
     <Box
@@ -556,7 +772,7 @@ const AdminDashboard: React.FC = () => {
 
       <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {listPanel}
-        {detailPanel}
+        {tab === "users" ? usersPanel : detailPanel}
       </Box>
 
       {/* Folder deny dialog */}
@@ -609,6 +825,51 @@ const AdminDashboard: React.FC = () => {
           </Button>
           <Button onClick={handleDenyConfirm} color="error" variant="contained" disabled={actionLoading}>
             Confirm Deny
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* User edit modal */}
+      <Dialog open={!!userEditTarget} onClose={closeUserEdit} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          Edit {userEditField === "is_active" ? "Status" : userEditField === "is_verified" ? "Verification" : "Role"}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={2} noWrap>
+            {userEditTarget?.email}
+          </Typography>
+          {userEditField === "is_superuser" ? (
+            <FormControl fullWidth size="small">
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={userEditValue ? "admin" : "user"}
+                label="Role"
+                onChange={(e) => setUserEditValue(e.target.value === "admin")}
+              >
+                <MenuItem value="user">User</MenuItem>
+                <MenuItem value="admin">Admin</MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <FormControl fullWidth size="small">
+              <InputLabel>{userEditField === "is_active" ? "Status" : "Verification"}</InputLabel>
+              <Select
+                value={userEditValue ? "true" : "false"}
+                label={userEditField === "is_active" ? "Status" : "Verification"}
+                onChange={(e) => setUserEditValue(e.target.value === "true")}
+              >
+                {userEditField === "is_active" ? (
+                  [<MenuItem key="active" value="true">Active</MenuItem>, <MenuItem key="inactive" value="false">Inactive</MenuItem>]
+                ) : (
+                  [<MenuItem key="verified" value="true">Verified</MenuItem>, <MenuItem key="unverified" value="false">Unverified</MenuItem>]
+                )}
+              </Select>
+            </FormControl>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeUserEdit}>Cancel</Button>
+          <Button onClick={handleUserEditSave} variant="contained" disabled={userEditLoading}>
+            Save
           </Button>
         </DialogActions>
       </Dialog>

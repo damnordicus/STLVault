@@ -320,6 +320,27 @@ export const api = {
     if (!res.ok) throw new Error("Deny failed");
   },
 
+  // 23. ADMIN: list all users
+  getAdminUsers: async (): Promise<{ id: string; email: string; display_name: string | null; is_active: boolean; is_verified: boolean; is_superuser: boolean }[]> => {
+    const res = await authFetch(`${API_BASE_URL}/admin/users`);
+    if (!res.ok) throw new Error("Failed to fetch users");
+    return res.json();
+  },
+
+  // 24. ADMIN: patch a user
+  patchAdminUser: async (
+    id: string,
+    updates: { is_active?: boolean; is_verified?: boolean; is_superuser?: boolean },
+  ): Promise<{ id: string; email: string; display_name: string | null; is_active: boolean; is_verified: boolean; is_superuser: boolean }> => {
+    const res = await authFetch(`${API_BASE_URL}/admin/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error("Failed to update user");
+    return res.json();
+  },
+
   // 19. ADMIN: deny a model
   denyModel: async (id: string, reason: string): Promise<STLModel> => {
     const res = await authFetch(`${API_BASE_URL}/admin/models/${id}/deny`, {
